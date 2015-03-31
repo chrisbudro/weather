@@ -16,6 +16,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
         // Override point for customization after application launch.
+        
+        
+//        println(UIFont.fontNamesForFamilyName("Helvetica Neue"))
+//        let navBarAppearance = UINavigationBar.appearance()
+//        let navBarFont = UIFont(name: "HelveticaNeue-Light", size: 14.0)
+//        let fontDict = [NSFontAttributeName: navBarFont!, NSForegroundColorAttributeName: UIColor.whiteColor() ]
+//        navBarAppearance.titleTextAttributes = fontDict
         return true
     }
 
