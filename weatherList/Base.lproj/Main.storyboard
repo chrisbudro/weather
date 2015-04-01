@@ -10,7 +10,7 @@
             <objects>
                 <collectionViewController automaticallyAdjustsScrollViewInsets="NO" hidesBottomBarWhenPushed="YES" id="fje-tc-HdE" customClass="CollectionViewController" customModule="weatherList" customModuleProvider="target" sceneMemberID="viewController">
                     <collectionView key="view" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" alwaysBounceHorizontal="YES" pagingEnabled="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" dataMode="prototypes" id="Fzb-La-9GG">
-                        <rect key="frame" x="0.0" y="0.0" width="320" height="568"/>
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="524"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <collectionViewFlowLayout key="collectionViewLayout" scrollDirection="horizontal" minimumLineSpacing="0.0" minimumInteritemSpacing="0.0" id="E0G-YO-oVJ">
                             <size key="itemSize" width="320" height="566"/>
@@ -124,25 +124,43 @@
                         </connections>
                     </collectionView>
                     <extendedEdge key="edgesForExtendedLayout" top="YES"/>
+                    <toolbarItems>
+                        <barButtonItem style="done" systemItem="add" id="tTP-Sw-Yff"/>
+                    </toolbarItems>
                     <navigationItem key="navigationItem" id="Ivg-2D-YUS">
+                        <nil key="title"/>
                         <barButtonItem key="leftBarButtonItem" systemItem="refresh" id="paa-j8-KlO">
                             <connections>
                                 <action selector="refreshWasPressed:" destination="fje-tc-HdE" id="FWk-SW-pHN"/>
                             </connections>
                         </barButtonItem>
+                        <view key="titleView" contentMode="scaleToFill" id="bff-vT-2WG">
+                            <rect key="frame" x="51" y="6" width="219" height="33"/>
+                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                            <subviews>
+                                <label opaque="NO" userInteractionEnabled="NO" contentMode="center" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Portland, OR" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Gbs-J9-Ncv">
+                                    <rect key="frame" x="39" y="9" width="141" height="15"/>
+                                    <fontDescription key="fontDescription" name="HelveticaNeue-Light" family="Helvetica Neue" pointSize="12"/>
+                                    <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                    <nil key="highlightedColor"/>
+                                </label>
+                            </subviews>
+                        </view>
                         <barButtonItem key="rightBarButtonItem" systemItem="add" id="pc6-jl-mrS">
                             <connections>
                                 <segue destination="5kS-HW-O6i" kind="push" id="Gs5-gR-KCv"/>
                             </connections>
                         </barButtonItem>
                     </navigationItem>
+                    <simulatedToolbarMetrics key="simulatedBottomBarMetrics"/>
                     <connections>
                         <outlet property="flowLayout" destination="E0G-YO-oVJ" id="ZuE-rT-eu5"/>
+                        <outlet property="navTitle" destination="Gbs-J9-Ncv" id="u8V-LL-V7x"/>
                     </connections>
                 </collectionViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="kcs-Vp-HJ4" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="519" y="384"/>
+            <point key="canvasLocation" x="564" y="384"/>
         </scene>
         <!--Locations Table View Controller-->
         <scene sceneID="KkP-Ja-7JE">
