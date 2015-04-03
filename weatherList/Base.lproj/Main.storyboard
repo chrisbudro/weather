@@ -168,7 +168,13 @@
                     <toolbarItems>
                         <barButtonItem title="Item" id="V0d-n7-Xgx"/>
                     </toolbarItems>
-                    <navigationItem key="navigationItem" id="f1E-fy-yIv"/>
+                    <navigationItem key="navigationItem" id="f1E-fy-yIv">
+                        <barButtonItem key="rightBarButtonItem" style="plain" systemItem="edit" id="y8S-Ni-5qh">
+                            <connections>
+                                <action selector="editWasPressed:" destination="5kS-HW-O6i" id="YRe-h4-0aA"/>
+                            </connections>
+                        </barButtonItem>
+                    </navigationItem>
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="mcn-yj-iMK" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>

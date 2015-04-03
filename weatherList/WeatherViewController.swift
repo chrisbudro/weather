@@ -21,6 +21,7 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
     let desiredAccuracy : CLLocationAccuracy = 1000
     let minimumDistanceMoved : Double = 3000
     let localTag = 0
+    let minimumTimeSinceLastUpdate = -7200.0
 
     
     // Properties
@@ -128,7 +129,7 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
     
     func locationManager(manager: CLLocationManager!, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
         
-        if (CLLocationManager.authorizationStatus() == .AuthorizedAlways || CLLocationManager.authorizationStatus() == .AuthorizedWhenInUse) {
+        if (CLLocationManager.authorizationStatus() == .Authorized || CLLocationManager.authorizationStatus() == .AuthorizedWhenInUse) {
             getLocation()
         }
     }
@@ -150,41 +151,15 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
         let locationData = NSKeyedArchiver.archivedDataWithRootObject(newLocation)
         NSUserDefaults.standardUserDefaults().setObject(locationData, forKey: "lastKnownLocation")
         
+        println("distance from last: \(distanceFromLast)")
         
-        if (distanceFromLast != nil && distanceFromLast > minimumDistanceMoved) {
+        if (distanceFromLast == nil || distanceFromLast > minimumDistanceMoved) {
             let geoCoder = CLGeocoder()
             geoCoder.reverseGeocodeLocation(newLocation, completionHandler: {(placemarks, error) -> Void in
                 if error == nil {
                     let placemark = placemarks[0] as CLPlacemark
-                    self.weatherRequester.getWeatherData(placemark, isLocal: true, completion: { (weatherData, tag) -> Void in
-                        
-                            // add or update location in the weather Dictionary with local tag key: 0
-                            self.weatherDict[self.localTag] = weatherData
-                            // if the local tag is already in the weatherTags array, make sure it is first
-                            if let index = find(self.weatherTags, self.localTag) {
-                                if index != 0 {
-                                    self.weatherTags.removeAtIndex(index)
-                                }
-                            } else {
-                                self.weatherTags.insert(self.localTag, atIndex: 0)
-                            }
-                        println("request finished: \(placemark.locality)")
-
-                        
-                        // store download data
-                        let data = NSKeyedArchiver.archivedDataWithRootObject(self.weatherDict)
-                        NSUserDefaults.standardUserDefaults().setObject(data, forKey: savedLocations)
-                        NSUserDefaults.standardUserDefaults().setObject(self.weatherTags, forKey: "weatherTags")
-                        
-                        dispatch_async(dispatch_get_main_queue(), { () -> Void in
-                            self.collectionView!.reloadData()
-                            println("data reloaded")
-                        })
-                        
-                    })
-                    
-                    
-                    
+                    self.requestWeatherData(placemark, isLocal: true)
+  
                 } else {
                     println(error)
                 }
@@ -193,15 +168,27 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
         }
     }
     
-    func updateWeatherData(placemark: CLPlacemark, isLocal: Bool) {
-        // check stored weather and timestamp to see if it needs to be refreshed
+    func updateWeatherData(index: Int, forceUpdate: Bool) {
+
+        let tag = weatherTags[index]
+        let weatherData = weatherDict[tag]
+        let lastUpdateTimestamp = NSTimeInterval(weatherData!.unixTime!)
+        let lapsedTime = NSDate().timeIntervalSince1970 - lastUpdateTimestamp
+
+        if (lapsedTime < minimumTimeSinceLastUpdate || forceUpdate == false ) {
+            var local = (index == 0) ? true : false
+            requestWeatherData(weatherData!.placemark!, isLocal: local)
+        }
+    }
+    
+    func requestWeatherData(placemark: CLPlacemark, isLocal: Bool) {
 
         self.weatherRequester.getWeatherData(placemark, isLocal: true, completion: { (weatherData, tag) -> Void in
-            
             
             if (isLocal) {
                 // add or update location in the weather Dictionary with local tag key: 0
                 self.weatherDict[self.localTag] = weatherData
+                
                 // if the local tag is already in the weatherTags array, make sure it is first
                 if let index = find(self.weatherTags, self.localTag) {
                     if index != 0 {
@@ -214,6 +201,7 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
                 
             } else {
                 self.weatherDict[placemark.hash] = weatherData
+                
                 // if the tag is already in the list then leave it
                 if let index = find(self.weatherTags, placemark.hash) {
                     println("already in tags array")
@@ -225,50 +213,24 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
             println("request finished: \(placemark.locality)")
             
             // store downloaded data
-            let data = NSKeyedArchiver.archivedDataWithRootObject(self.weatherDict)
-            NSUserDefaults.standardUserDefaults().setObject(data, forKey: savedLocations)
-            NSUserDefaults.standardUserDefaults().setObject(self.weatherTags, forKey: "weatherTags")
+            self.saveData(self.weatherDict, weatherTags: self.weatherTags)
+
             
             dispatch_async(dispatch_get_main_queue(), { () -> Void in
                 self.collectionView!.reloadData()
             })
-            
         })
-
-        
     }
-    
-    
-    
-    
-    
-    
-    
-//        func weatherRequestDidSucceed(weatherData: Weather, tag: Int, isLocal: Bool) {
-//
-//            if (isLocal) {
-//                // add or update location in the weather Dictionary with local tag key: 0
-//                self.weatherDict[self.localTag] = weatherStruct
-//                // if the local tag is already in the weatherTags array, make sure it is first
-//                if let index = find(self.weatherTags, self.localTag) {
-//                    if index != 0 {
-//                        self.weatherTags.removeAtIndex(index)
-//                    }
-//                } else {
-//                    self.weatherTags.insert(self.localTag, atIndex: 0)
-//                }
-//            } else {
-//                
-//                self.weatherDict[placemark.locality.hash] = weatherStruct
-//                if (find(self.weatherTags, placemark.locality.hash) == nil) {
-//                    self.weatherTags.append(placemark.locality.hash)
-//                }
-//            }
-//            
-//        }
+
     
     
     //MARK: Helper Methods
+    
+    func saveData(weatherDict: [Int : WeatherData], weatherTags: [Int]) {
+        let data = NSKeyedArchiver.archivedDataWithRootObject(weatherDict)
+        NSUserDefaults.standardUserDefaults().setObject(data, forKey: savedLocations)
+        NSUserDefaults.standardUserDefaults().setObject(weatherTags, forKey: "weatherTags")
+    }
 
     
     func getImage(index: Int) -> UIImage {
@@ -317,18 +279,7 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
         
     }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
     //MARK: Scroll View Delegate
 
     override func scrollViewWillBeginDragging(scrollView: UIScrollView) {
@@ -451,31 +402,33 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
    //MARK: Locations Table View Delegate Methods 
     
     
-    func didAddLocation(weatherDict: [Int : WeatherData], weatherTags: [Int]) {
-        self.weatherDict = weatherDict
-        self.weatherTags = weatherTags
-        pageControl.numberOfPages = weatherTags.count
+    func didAddLocation(placemark: CLPlacemark) {
+        
+        requestWeatherData(placemark, isLocal: false)
         collectionView?.reloadData()
         println("delegate called")
         
     }
     
-    func didDeleteLocation() {
-        
+    func didDeleteLocation(tag: Int) {
+        weatherDict.removeValueForKey(tag)
+        let tagIndex = find(weatherTags, tag)
+        weatherTags.removeAtIndex(tagIndex!)
+        saveData(weatherDict, weatherTags: weatherTags)
+        collectionView?.reloadData()
+    }
+    
+    func didArrangeList(weatherTags: [Int]) {
+        self.weatherTags = weatherTags
+        collectionView?.reloadData()
     }
 
-    
     //MARK: Buttons
     
     
     @IBAction func refreshWasPressed(sender: UIBarButtonItem) {
         
         getLocation()
-//        NSUserDefaults.standardUserDefaults().synchronize()
-//        if let data = NSUserDefaults.standardUserDefaults().objectForKey(savedLocations) as? NSData {
-//            self.weatherDict = NSKeyedUnarchiver.unarchiveObjectWithData(data) as [Int: WeatherData]
-//            let tags = NSUserDefaults.standardUserDefaults().objectForKey("weatherTags") as [Int]
-//        }
         self.collectionView!.reloadData()
         
     }
