@@ -10,96 +10,86 @@ import Foundation
 import CoreLocation
 import UIKit
 
-class DataModel : NSObject, CLLocationManagerDelegate {
+class DataModel : NSObject {
     
-    private let apiKey = ""
     var locationsArray : [NSDictionary]?
-    let locationManager = CLLocationManager()
-    let defaults = NSUserDefaults.standardUserDefaults()
-    
-    override init() {
-        let pathToFile = NSBundle.mainBundle().pathForResource("APIKey", ofType: "")
-        let file = NSString(contentsOfFile: pathToFile!, encoding: NSUTF8StringEncoding, error: nil)
-        self.apiKey = file!.stringByTrimmingCharactersInSet(NSCharacterSet.newlineCharacterSet())
-    }
-    
-    func getLocationsList() {
-        // while this method is loading display activity indicator
-        
-        // if savedLocations in NSUserDefaults is not nil then assign it to locationsArray
-        
 
-        if let savedLocations = defaults.arrayForKey("savedLocations") as? [NSDictionary]
-        {
-            locationsArray = savedLocations
-            NSNotificationCenter.defaultCenter().postNotificationName("locationsUpdated", object: nil)
-        }
-        else {
-            // get current location
-            self.getLocation()
-            
-            // upon completion, save current location to user defaults
-            // pull from user defaults and assign to locations array
-            // upon completion run refreshWeather()
-        }
-        
-        // hide activity indicator
-        
-    }
-    
-    func getLocation() {
-        println(self.apiKey)
-        println("getting location")
-        
-        self.locationManager.delegate = self
-        self.locationManager.desiredAccuracy = 1000
-        self.locationManager.requestWhenInUseAuthorization()
-        self.locationManager.startUpdatingLocation()
-    }
-    
-    func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!) {
-        self.locationManager.stopUpdatingLocation()
-        let locationData = locations[0] as CLLocation
-        
-        let geoCoder = CLGeocoder()
-        geoCoder.reverseGeocodeLocation(locationData, completionHandler: {(placemarks, error) -> Void in
-            if error == nil {
-                let placeMarks = placemarks as [CLPlacemark]
-                let placemark = placeMarks[0] as CLPlacemark
-                let locationName = "\(placemark.locality), \(placemark.administrativeArea)"
-                let coordinates = "\(locationData.coordinate.latitude),\(locationData.coordinate.longitude)"
-                let savedLocation = ["locationName": locationName, "coordinates": coordinates]
 
-                
-                // save userDefaults
-                let defaults = NSUserDefaults.standardUserDefaults()
-                if let savedLocations = defaults.arrayForKey("savedLocations") as? [NSDictionary]
-                {
-                    var updatedLocations = savedLocations
-                    updatedLocations[0] = savedLocation
-                    defaults.setObject(updatedLocations, forKey: "savedLocations")
-                    NSNotificationCenter.defaultCenter().postNotificationName("locationsUpdated", object: nil)
-                } else {
-                    defaults.setObject([savedLocation], forKey: "savedLocations")
-                }
-                println("refreshing index 0: current location")
-                self.refresh(0)
-            } else {
-                println("location fetch failed")
-            }
-        })
-    }
     
-    func refreshAllWeather() {
-        
-        if let locationsArray = self.defaults.arrayForKey("savedLocations") {
-        
-            for (index, location) in enumerate(locationsArray) {
-                self.refresh(index)
-            }
-        }
-    }
-        
+
+    
+//    func getLocationsList() {
+//        // while this method is loading, display activity indicator
+//        
+//        // if savedLocations in NSUserDefaults is not nil then assign it to locationsArray
+//        
+//
+//        if let savedLocations = defaults.arrayForKey("savedLocations") as? [NSDictionary]
+//        {
+//            locationsArray = savedLocations
+//            NSNotificationCenter.defaultCenter().postNotificationName("locationsUpdated", object: nil)
+//        }
+//        else {
+//            // get current location
+//            self.getLocation()
+//            
+//            // upon completion, save current location to user defaults
+//            // pull from user defaults and assign to locations array
+//            // upon completion run refreshWeather()
+//        }
+//        
+//        // hide activity indicator
+//        
+//    }
+    
+//    func getLocation() {
+//        self.locationManager.delegate = self
+//        self.locationManager.desiredAccuracy = 1000
+//        self.locationManager.requestWhenInUseAuthorization()
+//        self.locationManager.startUpdatingLocation()
+//    }
+//    
+//    func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!) {
+//        self.locationManager.stopUpdatingLocation()
+//        let locationData = locations[0] as CLLocation
+//        
+//        let geoCoder = CLGeocoder()
+//        geoCoder.reverseGeocodeLocation(locationData, completionHandler: {(placemarks, error) -> Void in
+//            if error == nil {
+//                let placemark = placemarks[0] as CLPlacemark
+//                let locationName = "\(placemark.locality), \(placemark.administrativeArea)"
+//                let coordinates = "\(locationData.coordinate.latitude),\(locationData.coordinate.longitude)"
+//                let savedLocation = ["locationName": locationName, "coordinates": coordinates]
+//
+//                
+//                // save userDefaults
+//                let defaults = NSUserDefaults.standardUserDefaults()
+//                if let savedLocations = defaults.arrayForKey("savedLocations") as? [NSDictionary]
+//                {
+//                    var updatedLocations = savedLocations
+//                    updatedLocations[0] = savedLocation
+//                    defaults.setObject(updatedLocations, forKey: "savedLocations")
+//                    NSNotificationCenter.defaultCenter().postNotificationName("locationsUpdated", object: nil)
+//                } else {
+//                    defaults.setObject([savedLocation], forKey: "savedLocations")
+//                }
+//                println("refreshing index 0: current location")
+//            } else {
+//                println("location fetch failed")
+//            }
+//        })
+//    }
+    
+//    func refreshAllWeather() {
+//        
+//        if let locationsArray = self.defaults.arrayForKey("savedLocations") {
+//        
+//            for (index, location) in enumerate(locationsArray) {
+//                
+//            }
+//        }
+//    }
+    
         
     func makeWeather(weatherDict: NSDictionary, locationName: String, coordinates: String) -> NSDictionary {
         let currentWeather = weatherDict["currently"] as NSDictionary
@@ -128,7 +118,7 @@ class DataModel : NSObject, CLLocationManagerDelegate {
         
         switch stringIcon {
         case "clear-day":
-            imageName = "defaultWeatherImage"
+            imageName = "clear"
 //        case "clear-night":
 //            imageName = "clear-night"
         case "rain":
@@ -140,7 +130,7 @@ class DataModel : NSObject, CLLocationManagerDelegate {
 //        case "wind":
 //            imageName = "wind"
 //        case "fog":
-//            imageName = "fog"
+//            imageName = "rain"
         case "cloudy":
             imageName = "cloudy"
         case "partly-cloudy-day":
@@ -164,42 +154,7 @@ class DataModel : NSObject, CLLocationManagerDelegate {
         let dateString = dateFormatter.stringFromDate(weatherDate) as String
         return dateString
     }
-        
-        
-    func refresh(index: Int) {
-        println("starting refresh")
-        if let locations = defaults.arrayForKey("savedLocations") as? [NSDictionary] {
-            let location = locations[index]
-            let currentName = location["locationName"] as String
-            let coordinates = location["coordinates"] as String
-            
-            let baseURL: NSURL = NSURL(string: "https://api.forecast.io/forecast/\(self.apiKey)/")!
-            let forecastURL = NSURL(string: coordinates, relativeToURL:baseURL)
-            let sharedSession = NSURLSession.sharedSession()
-            let downloadTask: NSURLSessionDownloadTask = sharedSession.downloadTaskWithURL(forecastURL!, completionHandler: { (location: NSURL!, response:NSURLResponse!, error: NSError!) -> Void in
-                
-                if error == nil {
-                    let weatherData = NSData(contentsOfURL: location, options: nil, error: nil)
-                    let weatherDict : NSDictionary = NSJSONSerialization.JSONObjectWithData(weatherData!, options: nil, error: nil) as NSDictionary
-                    
-                    let currentWeather = self.makeWeather(weatherDict, locationName: currentName, coordinates: coordinates)
-                    var newLocations = self.defaults.arrayForKey("savedLocations") as [NSDictionary]
-                    newLocations[index] = currentWeather
-                    self.defaults.setObject(newLocations, forKey: "savedLocations")
-                    
-                    dispatch_async(dispatch_get_main_queue(), { () -> Void in
-                        NSNotificationCenter.defaultCenter().postNotificationName("weatherRefreshed", object: nil)
-                    })
-
-                    
-                    
-                } else {
-                    println(error)
-                }
-            })
-            downloadTask.resume()
-        }
-    }
+    
         
         
         

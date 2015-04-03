@@ -10,26 +10,62 @@ import UIKit
 import CoreData
 import CoreLocation
 
-class LocationsTableViewController: UITableViewController, NSFetchedResultsControllerDelegate, UISearchBarDelegate, UISearchControllerDelegate, UISearchResultsUpdating {
+
+protocol LocationsTableViewControllerDelegate  {
+    
+    func didDeleteLocation()
+    func didAddLocation(weatherDict: [Int : WeatherData], weatherTags: [Int])
+    
+    
+}
+
+
+
+
+
+class LocationsTableViewController: UITableViewController, UITableViewDelegate, UITableViewDataSource, NSFetchedResultsControllerDelegate, UISearchBarDelegate, UISearchControllerDelegate, UISearchResultsUpdating {
     
     var searchResults: String?
     let geoCoder = CLGeocoder()
-    var placemarks : NSMutableArray?
+    var placemarks = []
     let searchResultsView = UITableViewController()
     var results: NSMutableArray?
     var searchController : UISearchController?
     var savedLocations: [NSDictionary]?
-    let defaults = NSUserDefaults.standardUserDefaults()
     let dataModel = DataModel()
+    var backgroundImage : UIImage?
+    
+    var delegate : LocationsTableViewControllerDelegate?
+    
+    let weatherRequester = WeatherRequester()
+    
+    var weatherDict : [Int : WeatherData] = {
+        if let data = NSUserDefaults.standardUserDefaults().objectForKey("savedLocations") as? NSData {
+            let dict = NSKeyedUnarchiver.unarchiveObjectWithData(data) as [Int : WeatherData]
+            return dict
+        }
+        return [Int : WeatherData]()
+    }()
+    
+    var weatherTags : [Int] = {
+        if let tags = NSUserDefaults.standardUserDefaults().arrayForKey("weatherTags") as? [Int] {
+            return tags
+        }
+        return [Int]()
+    }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        if let locations = defaults.arrayForKey("savedLocations") as? [NSDictionary] {
-            self.savedLocations = locations
-        }
         
-        self.searchController = UISearchController(searchResultsController: nil)
+        let backgroundView = UIImageView(frame: self.view.bounds)
+//        backgroundView.image = backgroundImage!
+        self.view.addSubview(backgroundView)
+        self.tableView.sendSubviewToBack(backgroundView)
+        
+
+        // Instantiate Search Controller
+        self.searchController = UISearchController(searchResultsController: searchResultsView)
         self.searchController!.searchResultsUpdater = self
         self.searchController!.searchBar.delegate = self
         self.searchController!.delegate = self
@@ -37,20 +73,23 @@ class LocationsTableViewController: UITableViewController, NSFetchedResultsContr
         self.searchController!.hidesNavigationBarDuringPresentation = false
         self.searchController!.searchBar.showsCancelButton = true
         self.navigationItem.titleView = searchController!.searchBar
+        self.searchResultsView.navigationItem.titleView = searchController!.searchBar
         
-        let resultsTableView = UITableView(frame: CGRectMake(160, 240, 150, 150))
+        let resultsTableView = UITableView(frame: self.tableView.frame)
         self.searchResultsView.tableView = resultsTableView
         self.searchResultsView.tableView.dataSource = self
         self.searchResultsView.tableView.delegate = self
+        self.searchResultsView.navigationController?.navigationBarHidden = true
+        self.definesPresentationContext = true
         
+        self.tableView.backgroundColor = UIColor.clearColor()
+        
+
+        // Instantiate Table View Cell
         self.searchResultsView.tableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: "Cell")
         
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "locationsChanged", name:
-            "currentLocationUpdated", object: nil)
-
-    
-        
     }
+    
     
     func locationsChanged() {
         println("locationsUpdated in tables")
@@ -59,82 +98,116 @@ class LocationsTableViewController: UITableViewController, NSFetchedResultsContr
 
     // MARK: - Search Bar Data source
     
-     func updateSearchResultsForSearchController(searchController: UISearchController) {
-        if (searchController.searchBar.text.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) > 0) {
-        self.geoCoder.geocodeAddressString(searchController.searchBar.text, completionHandler: { (placemarks, error) -> Void in
-            if (error == nil) {
-                self.placemarks = NSMutableArray(array: placemarks)
-                self.searchResultsView.tableView.reloadData()
-            } else {
-                println(error)
-            }
-        })
+    func updateSearchResultsForSearchController(searchController: UISearchController) {
+
+        geoCodeString(searchController.searchBar.text)
+        self.searchResultsView.tableView.reloadData()
+        
+    }
+
+    
+    func geoCodeString(locationString: String) {
+        if (locationString.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) > 0) {
+            self.geoCoder.geocodeAddressString(locationString, completionHandler: { (placemarks, error) -> Void in
+                
+                if (error == nil) {
+                    self.placemarks = placemarks
+                } else {
+                    println(error)
+                }
+            })
         }
     }
     
     func searchBarSearchButtonClicked(searchBar: UISearchBar) {
         self.searchResults = searchBar.text
-        getCoordinates()
+        if (self.placemarks.count != 0) {
+            createLocationFromPlacemark(self.placemarks[0] as CLPlacemark)
+        }
         searchBar.resignFirstResponder()
         searchBar.text = ""
         
-        
     }
     
-    func searchBar(searchBar: UISearchBar, textDidChange searchText: String) {
-        if (searchBar == self.searchController!.searchBar) {
-        }
-    }
-    
-    
-    func searchBarTextDidEndEditing(searchBar: UISearchBar) {
-        println("end editing")
-    }
     
      func searchBarCancelButtonClicked(searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
-        self.dismissViewControllerAnimated(true, completion: nil)
+        self.searchController?.dismissViewControllerAnimated(true, completion: nil)
         
     }
     
     //MARK: - Search Locations
     
-    func getCoordinates() {
-        let geoCoder = CLGeocoder()
-        geoCoder.geocodeAddressString(self.searchResults, completionHandler: { (placemarks, error) -> Void in
-            if (error == nil) {
-//                self.placemarks = placemarks
-                let placemark = placemarks[0] as CLPlacemark
-                let location = placemark.location
-                let city = placemark.locality
-                let area = placemark.administrativeArea
-                
-                // get location name
-                let locationName = "\(city), \(area)"
-                
-                //get Coordinates
-                let coordinate = location.coordinate
-                let latitudeRaw = "\(coordinate.latitude)"
-                let longitudeRaw = "\(coordinate.longitude)"
-                let latitude = latitudeRaw.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet())
-                let longitude = longitudeRaw.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet())
-                let coordinates = "\(latitude),\(longitude)"
-                let locationDict = ["locationName": locationName, "coordinates": coordinates]
-                
-                //save to user defaults
-                
-                if let savedLocations = self.defaults.arrayForKey("savedLocations") as? [NSDictionary] {
-                    var updatedLocations = savedLocations
-                    updatedLocations.append(locationDict)
-                    self.defaults.setObject(updatedLocations, forKey: "savedLocations")
-                } else {
-                    self.defaults.setObject([[String:String](), locationDict], forKey: "savedLocations")
-                }
-                NSNotificationCenter.defaultCenter().postNotificationName("currentLocationUpdated", object: nil)
-                
+    func createLocationFromPlacemark(placemark: CLPlacemark) {
+
+        weatherRequester.getWeatherData(placemark, isLocal: false) { (weatherData, tag) -> Void in
+            
+            // add or update location in the weather Dictionary with local tag key: 0
+            self.weatherDict[placemark.hash] = weatherData
+            // if the local tag is already in the weatherTags array, make sure it is first
+            if let index = find(self.weatherTags, placemark.hash) {
+                    println("already in tags array")
+            } else {
+                self.weatherTags.append(placemark.hash)
             }
-        })
+            println("request finished: \(placemark.hash)")
+            println("dict: \(self.weatherDict)")
+            println("tags: \(self.weatherTags)")
+            
+            //testing delegate
+            println("delegate should be called")
+            self.delegate?.didAddLocation(self.weatherDict, weatherTags: self.weatherTags)
+            
+            
+            // store download data
+            let data = NSKeyedArchiver.archivedDataWithRootObject(self.weatherDict)
+            NSUserDefaults.standardUserDefaults().setObject(data, forKey: "savedLocations")
+            NSUserDefaults.standardUserDefaults().setObject(self.weatherTags, forKey: "weatherTags")
+
+            
+            dispatch_async(dispatch_get_main_queue(), { () -> Void in
+                self.tableView.reloadData()
+                println("data reloaded")
+            })
+            
+            
+            
+        }
     }
+    
+        
+        
+        
+        
+//                let location = placemark.location
+//                let city = placemark.locality
+//                let area = placemark.administrativeArea
+//
+//                // get location name
+//                let locationName = "\(city), \(area)"
+//                
+//                //get Coordinates
+//                let coordinate = location.coordinate
+//                let latitudeRaw = "\(coordinate.latitude)"
+//                let longitudeRaw = "\(coordinate.longitude)"
+//                let latitude = latitudeRaw.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet())
+//                let longitude = longitudeRaw.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet())
+//                let coordinates = "\(latitude),\(longitude)"
+//                let locationDict = ["locationName": locationName, "coordinates": coordinates]
+//    
+//                
+//                //save to user defaults
+//                
+//                if let savedLocations = self.defaults.arrayForKey("savedLocations") as? [NSDictionary] {
+//                    var updatedLocations = savedLocations
+//                    updatedLocations.append(locationDict)
+//                    self.defaults.setObject(updatedLocations, forKey: "savedLocations")
+//                } else {
+//                    self.defaults.setObject([[String:String](), locationDict], forKey: "savedLocations")
+//                }
+//                NSNotificationCenter.defaultCenter().postNotificationName("currentLocationUpdated", object: nil)
+//        
+//    }
 
 
     // MARK: - Table view data source
@@ -144,39 +217,61 @@ class LocationsTableViewController: UITableViewController, NSFetchedResultsContr
         }
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if let locations = defaults.arrayForKey("savedLocations") {
-            return locations.count
+        if (tableView == self.tableView) {
+            return weatherTags.count
+        }
+        if (tableView == self.searchResultsView.tableView) {
+            return placemarks.count
         }
         return 0
     }
 
     
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        if (tableView == self.tableView) {
-            let cell = tableView.dequeueReusableCellWithIdentifier("Cell", forIndexPath: indexPath) as UITableViewCell
-
-            if let locations = defaults.arrayForKey("savedLocations") as? [NSDictionary] {
-                let location = locations[indexPath.row]
-                
-                cell.textLabel!.text = (location["locationName"] as String)
-                
+        let cell = tableView.dequeueReusableCellWithIdentifier("Cell", forIndexPath: indexPath) as UITableViewCell
+        
+        if (tableView == self.tableView ) {
+            
+            let tag = weatherTags[indexPath.row]
+            
+            if let location = weatherDict[tag] as WeatherData! {
+                cell.textLabel!.text = location.locationName
+                cell.backgroundColor = UIColor.clearColor()
+                cell.textLabel!.textColor = UIColor.whiteColor()
             }
+            
             if (indexPath.row == 0) {
                 cell.accessoryType = .Checkmark
                 cell.selectionStyle = .None
             }
-            return cell
-            
         }
         
-        let cell = self.searchResultsView.tableView.dequeueReusableCellWithIdentifier("Cell", forIndexPath: indexPath) as UITableViewCell
-//            cell.textLabel!.text = (self.placemarks!.objectAtIndex(indexPath.row) as String)
-        cell.textLabel!.text = "right cell"
-        println("placemarks in cell: \(self.placemarks!.count)")
-        return cell
+        if (tableView == self.searchResultsView.tableView) {
         
+//            let cell = self.searchResultsView.tableView.dequeueReusableCellWithIdentifier("Cell", forIndexPath: indexPath) as UITableViewCell
+            if (self.placemarks.count != 0) {
+                if let placemark = self.placemarks[indexPath.row] as? CLPlacemark {
+                    println("placemark: \(placemark)")
+//                    if (placemark. == "en_US") {
+                        cell.textLabel!.text = "\(placemark.locality), \(placemark.administrativeArea)"
+//                    } else {
+//                        cell.textLabel!.text = "\(placemark.locality), \(placemark.ISOcountryCode)"
+//                    }
+                }
+            }
+        }
+        return cell
     }
 
+    override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+        if (tableView == self.searchResultsView.tableView) {
+                createLocationFromPlacemark(self.placemarks[indexPath.row] as CLPlacemark)
+                searchController?.searchBar.text = ""
+                self.placemarks = []
+            
+        }
+        self.tableView.reloadData()
+    }
 
     
     // Override to support conditional editing of the table view.
@@ -201,22 +296,22 @@ class LocationsTableViewController: UITableViewController, NSFetchedResultsContr
     
 
     // Override to support editing the table view.
-    override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
-        
-        if editingStyle == .Delete {
-            // Delete the row from the data source
-            
-            if let locations = defaults.arrayForKey("savedLocations") as? [NSDictionary] {
-                var newLocations = locations
-                newLocations.removeAtIndex(indexPath.row)
-                self.defaults.setObject(newLocations, forKey: "savedLocations")
-                tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
-                NSNotificationCenter.defaultCenter().postNotificationName("locationsUpdated", object: nil)
-                
-            }
-
-        }
-    }
+//    override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
+//        
+//        if editingStyle == .Delete {
+//            // Delete the row from the data source
+//            
+//            if let locations = defaults.arrayForKey("savedLocations") as? [NSDictionary] {
+//                var newLocations = locations
+//                newLocations.removeAtIndex(indexPath.row)
+//                self.defaults.setObject(newLocations, forKey: "savedLocations")
+//                tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
+//                NSNotificationCenter.defaultCenter().postNotificationName("locationsUpdated", object: nil)
+//                
+//            }
+//
+//        }
+//    }
 
     /*
     // Override to support rearranging the table view.
