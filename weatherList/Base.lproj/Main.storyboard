@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="6254" systemVersion="14B25" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" initialViewController="wWV-8b-OIr">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="7528.3" systemVersion="14B25" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="6247"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="7518.3"/>
         <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
     </dependencies>
     <scenes>
@@ -108,14 +108,6 @@
                                     <constraint firstAttribute="centerX" secondItem="wCp-N7-iEU" secondAttribute="centerX" constant="3.5" id="vJw-vu-w1l"/>
                                     <constraint firstItem="5vw-oH-EjO" firstAttribute="trailing" secondItem="wCp-N7-iEU" secondAttribute="trailing" id="yaF-IQ-GMd"/>
                                 </constraints>
-                                <connections>
-                                    <outlet property="currentHighLowLabel" destination="wCp-N7-iEU" id="ee8-1E-Axd"/>
-                                    <outlet property="currentPrecipLabel" destination="YOW-xS-qsm" id="6yQ-c8-1Rk"/>
-                                    <outlet property="currentSummaryLabel" destination="AHm-jN-dS6" id="kDB-zC-jQV"/>
-                                    <outlet property="currentTemperatureLabel" destination="5vw-oH-EjO" id="yoG-KE-D3b"/>
-                                    <outlet property="currentWindLabel" destination="YLT-Zq-wgt" id="gFp-my-eN6"/>
-                                    <outlet property="locationNameLabel" destination="IjP-No-kul" id="2EL-4O-XBZ"/>
-                                </connections>
                             </collectionViewCell>
                         </cells>
                         <connections>
@@ -132,13 +124,12 @@
                                 <action selector="refreshWasPressed:" destination="fje-tc-HdE" id="FWk-SW-pHN"/>
                             </connections>
                         </barButtonItem>
-                        <barButtonItem key="rightBarButtonItem" style="done" systemItem="add" id="pc6-jl-mrS">
-                            <connections>
-                                <segue destination="5kS-HW-O6i" kind="push" identifier="showLocationsList" id="Gs5-gR-KCv"/>
-                            </connections>
-                        </barButtonItem>
+                        <barButtonItem key="rightBarButtonItem" style="done" systemItem="add" id="pc6-jl-mrS"/>
                     </navigationItem>
                     <nil key="simulatedBottomBarMetrics"/>
+                    <connections>
+                        <segue destination="5kS-HW-O6i" kind="modal" identifier="showLocationsList" id="3pS-Jf-xvH"/>
+                    </connections>
                 </collectionViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="kcs-Vp-HJ4" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
@@ -169,7 +160,7 @@
                         <barButtonItem title="Item" id="V0d-n7-Xgx"/>
                     </toolbarItems>
                     <navigationItem key="navigationItem" id="f1E-fy-yIv">
-                        <barButtonItem key="rightBarButtonItem" style="plain" systemItem="edit" id="y8S-Ni-5qh">
+                        <barButtonItem key="rightBarButtonItem" systemItem="edit" id="y8S-Ni-5qh">
                             <connections>
                                 <action selector="editWasPressed:" destination="5kS-HW-O6i" id="YRe-h4-0aA"/>
                             </connections>
@@ -178,7 +169,7 @@
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="mcn-yj-iMK" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="920" y="382"/>
+            <point key="canvasLocation" x="1065" y="351"/>
         </scene>
         <!--Navigation Controller-->
         <scene sceneID="R3h-Es-2de">

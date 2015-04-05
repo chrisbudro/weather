@@ -15,6 +15,7 @@ protocol LocationsTableViewControllerDelegate  {
     func didDeleteLocation(tag: Int)
     func didAddLocation(placemark: CLPlacemark)
     func didArrangeList(weatherTags: [Int])
+    func didSelectLocationFromList(tag: Int)
     
     
 }
@@ -31,8 +32,13 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     var weatherDict : [Int : WeatherData]?
     var weatherTags : [Int]?
     
+
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        
         
         
         // Instantiate Search Controller
@@ -41,10 +47,10 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         self.searchController!.searchBar.delegate = self
         self.searchController!.delegate = self
         self.searchController!.dimsBackgroundDuringPresentation = false
-        self.searchController!.hidesNavigationBarDuringPresentation = false
+        self.searchController!.hidesNavigationBarDuringPresentation = true
         self.searchController!.searchBar.showsCancelButton = false
         self.navigationItem.titleView = searchController!.searchBar
-        self.searchResultsView.navigationItem.titleView = searchController!.searchBar
+
         
         let resultsTableView = UITableView(frame: self.tableView.frame)
         self.searchResultsView.tableView = resultsTableView
@@ -53,19 +59,57 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         self.searchResultsView.navigationController?.navigationBarHidden = true
         self.definesPresentationContext = true
         
-        self.tableView.backgroundColor = UIColor.clearColor()
-        
-
         // Instantiate Table View Cell
         self.searchResultsView.tableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+        
+        // Table Header
+        
+        let headerView = UIView(frame: CGRectMake(0, 20, tableView.frame.width, 60.0))
+
+        
+        
+        
+        tableView.frame.size.width = self.view.frame.size.width - 40
+        searchController!.searchBar.frame = CGRectMake(0, 0, self.tableView.frame.size.width, 44)
+        searchController!.searchBar.backgroundColor = UIColor.lightGrayColor()
+        
+        
+        tableView.contentInset = UIEdgeInsetsMake(20, 0, 0, 0)
+        
+        headerView.addSubview(searchController!.searchBar)
+        
+        tableView.tableHeaderView = searchController!.searchBar
+        
+        
+        
+        
+        
+        
+        
+//        id barButtonAppearanceInSearchBar = [UIBarButtonItem appearanceWhenContainedIn:[UISearchBar class], nil];
+//        
+//        [barButtonAppearanceInSearchBar setBackgroundImage:grayBackgroundImage forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+//        [barButtonAppearanceInSearchBar setTitleTextAttributes:@{
+//            UITextAttributeFont : [UIFont fontWithName:@"HelveticaNeue-CondensedBold" size:20],
+//            UITextAttributeTextColor : [UIColor blackColor]
+//        } forState:UIControlStateNormal];
+//        [barButtonAppearanceInSearchBar setTitle:@"X"];
         
     }
 
 
     // MARK: - Search Bar Data source
     
+    
+    
+    func searchBarTextDidBeginEditing(searchBar: UISearchBar) {
+        println("begin editing")
+        searchController!.searchBar.frame = CGRectMake(-40, 0, self.tableView.frame.size.width, 44)
+    }
+    
     func updateSearchResultsForSearchController(searchController: UISearchController) {
 
+        
         geoCodeString(searchController.searchBar.text)
         self.searchResultsView.tableView.reloadData()
         
@@ -88,11 +132,11 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     func searchBarSearchButtonClicked(searchBar: UISearchBar) {
         self.searchResults = searchBar.text
         if (self.placemarks.count != 0) {
-            self.delegate?.didAddLocation(self.placemarks[0] as CLPlacemark)
+            self.delegate?.didAddLocation(self.placemarks[0] as! CLPlacemark)
         }
         searchBar.resignFirstResponder()
         searchBar.text = ""
-        
+        self.searchController?.dismissViewControllerAnimated(true, completion: nil)
     }
     
     
@@ -121,7 +165,7 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
 
     
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier("Cell", forIndexPath: indexPath) as UITableViewCell
+        let cell = tableView.dequeueReusableCellWithIdentifier("Cell", forIndexPath: indexPath) as! UITableViewCell
         
         if (tableView == self.tableView ) {
             
@@ -130,7 +174,7 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
             if let location = weatherDict![tag] as WeatherData! {
                 cell.textLabel!.text = location.locationName
                 cell.backgroundColor = UIColor.clearColor()
-                cell.textLabel!.textColor = UIColor.whiteColor()
+                cell.textLabel!.textColor = UIColor.blackColor()
             }
             
             if (indexPath.row == 0) {
@@ -141,7 +185,7 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         
         if (tableView == self.searchResultsView.tableView) {
     
-            if (self.placemarks.count != 0) {
+            if (self.placemarks.count > indexPath.row) {
                 if let placemark = self.placemarks[indexPath.row] as? CLPlacemark {
                     println("placemark: \(placemark)")
                     cell.textLabel!.text = "\(placemark.locality), \(placemark.administrativeArea)"
@@ -152,12 +196,29 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     }
 
     override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+        
+        var tag : Int?
+        
         if (tableView == self.searchResultsView.tableView) {
-            self.delegate?.didAddLocation(self.placemarks[indexPath.row] as CLPlacemark)
-            searchController?.searchBar.text = ""
+            if (self.placemarks.count > indexPath.row) {
+                let placemark = self.placemarks[indexPath.row] as! CLPlacemark
+                self.delegate?.didAddLocation(placemark)
+                weatherTags!.append(placemark.location.hash)
+                searchController?.searchBar.text = ""
+                tag = placemark.location.hash
+                
+            } else {
+                println("Placemarker for UIAlert View:  An error has occured please try adding the location again")
+            }
+            
             self.placemarks = []
             
+        } else if (tableView == self.tableView) {
+            tag = weatherTags![indexPath.row]
         }
+        
+        self.delegate?.didSelectLocationFromList(tag!)
+        performSegueWithIdentifier("dismissList", sender: self)
         self.tableView.reloadData()
     }
 
@@ -185,10 +246,12 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         
         if editingStyle == .Delete {
             // Delete the row from the data source
+            tableView.beginUpdates()
             let tag = weatherTags![indexPath.row]
             self.delegate?.didDeleteLocation(tag)
             weatherTags!.removeAtIndex(indexPath.row)
             tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
+            tableView.endUpdates()
                 
             }
     }
@@ -220,7 +283,6 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         
         return true
     }
-
 
 
     @IBAction func editWasPressed(sender: UIBarButtonItem) {

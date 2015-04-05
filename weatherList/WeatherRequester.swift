@@ -11,7 +11,7 @@ import CoreLocation
 
 class WeatherRequester: NSObject {
     
-//    class let sharedRequester = WeatherRequester()
+    static let sharedRequester = WeatherRequester()
     
     private let apiKey : String
     private let baseURL: NSURL
@@ -25,7 +25,7 @@ class WeatherRequester: NSObject {
         self.baseURL = NSURL(string: "https://api.forecast.io/forecast/\(self.apiKey)/")!
     }
    
-    func getWeatherData(placemark: CLPlacemark, isLocal: Bool, completion: (weatherData : WeatherData, tag : Int) -> Void) {
+    func getWeatherData(placemark: CLPlacemark, isLocal: Bool, completion: (weatherData : WeatherData?, tag : Int?, error: NSError!) -> Void) {
 
     
         let coordinates = "\(placemark.location.coordinate.latitude),\(placemark.location.coordinate.longitude)"
@@ -35,13 +35,14 @@ class WeatherRequester: NSObject {
             
             if error == nil {
                 let data = NSData(contentsOfURL: location, options: nil, error: nil)
-                let weatherJSON : NSDictionary = NSJSONSerialization.JSONObjectWithData(data!, options: nil, error: nil) as NSDictionary
+                let weatherJSON : NSDictionary = NSJSONSerialization.JSONObjectWithData(data!, options: nil, error: nil) as! NSDictionary
                 
                 let weatherData = self.dataFromRequest(placemark, weatherJSON: weatherJSON) as WeatherData
-                completion(weatherData: weatherData, tag: placemark.locality.hash)
+                completion(weatherData: weatherData, tag: placemark.location.hash, error: nil)
                 
 
             } else {
+                completion(weatherData: nil, tag: nil, error: error)
                 println(error)
             }
         })
@@ -52,7 +53,7 @@ class WeatherRequester: NSObject {
 
     func dataFromRequest(placemark: CLPlacemark, weatherJSON: NSDictionary) -> WeatherData {
         
-        let currentWeather = weatherJSON["currently"] as NSDictionary
+        let currentWeather = weatherJSON["currently"] as! NSDictionary
         let data = WeatherData()
         
 //        let fTemp = currentWeather["apparentTemperature"] as Double
@@ -62,7 +63,7 @@ class WeatherRequester: NSObject {
 //        let windSpeed = currentWeather["windSpeed"] as Double
 //        let windSpeedKPH = windSpeed * 1.609344
         
-        let iconString = currentWeather["icon"] as String
+        let iconString = currentWeather["icon"] as! String
         
         data.placemark = placemark
         data.locationName = "\(placemark.locality), \(placemark.administrativeArea)"

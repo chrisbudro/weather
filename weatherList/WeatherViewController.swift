@@ -30,7 +30,7 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
     // Get weather dictionary from User Defaults
     var weatherDict : [Int : WeatherData] = {
         if let data = NSUserDefaults.standardUserDefaults().objectForKey(savedLocations) as? NSData {
-            let dict = NSKeyedUnarchiver.unarchiveObjectWithData(data) as [Int: WeatherData]
+            let dict = NSKeyedUnarchiver.unarchiveObjectWithData(data) as! [Int: WeatherData]
 
             return dict
         }
@@ -45,20 +45,22 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
         return [Int]()
     }()
     
-    let dataModel = DataModel()
     var backgroundImageView = UIImageView()
     var nextImageView = UIImageView()
     var toImage = UIImage()
     var scrollOffset : CGFloat?
     let pageControl = UIPageControl() //doesn't reload
     let locationManager = CLLocationManager()
-    var currentIndex = 0
+    var currentIndex : Int?
+    let transitionManager = TransitionManager()
     
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-
+        self.transitionManager.sourceViewController = self
+        
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: "viewBecameActive", name: UIApplicationDidBecomeActiveNotification, object: nil)
         
         //check location athorization status
         locationManager.delegate = self
@@ -108,17 +110,40 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
         self.view.addSubview(pageControl)
         pageControl.userInteractionEnabled = false
         
+        collectionView?.alwaysBounceVertical = true
+        
+        
+        // Add Location Button
+//        let topView = UIView(frame: CGRectMake(0, 0, self.view.frame.size.width, 40))
+//        let locationsButton = UIButton(frame: CGRectMake(self.view.frame.width - 40, 30, 40, 40))
+//        let buttonImageView = UIImageView(image: UIImage(named: "menu"))
+//        buttonImageView.frame = CGRectMake(0, 0, 30, 30)
+//        locationsButton.addSubview(buttonImageView)
+//        locationsButton.addTarget(self, action: "addWasPressed:", forControlEvents: .TouchUpInside)
+//        
+//        topView.backgroundColor = UIColor.clearColor()
+//        
+//        topView.addSubview(locationsButton)
+//        self.view.addSubview(topView)
+        
+//        let bottomView = UIView(frame: CGRectMake(0, self.view.frame.size.height - 60, self.view.frame.size.width, 60))
+//        bottomView.backgroundColor = UIColor.clearColor()
+        
+
+        
     }
     
     override func viewWillAppear(animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Set Nav Bar Transparency
-        self.navigationController!.navigationBar.setBackgroundImage(UIImage(named: "ClearNavBarBackground"), forBarMetrics: .Default)
-        self.navigationController!.navigationBar.shadowImage = UIImage()
-        
+//        // Set Nav Bar Transparency
+//        self.navigationController!.navigationBar.setBackgroundImage(UIImage(named: "lightNavBarBackground"), forBarMetrics: .Default)
+//        self.navigationController!.navigationBar.shadowImage = UIImage()
+//        
     }
     
+    
+    //MARK: Location Delegate
     
     func getLocation() {
         println("getting location")
@@ -129,7 +154,7 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
     
     func locationManager(manager: CLLocationManager!, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
         
-        if (CLLocationManager.authorizationStatus() == .Authorized || CLLocationManager.authorizationStatus() == .AuthorizedWhenInUse) {
+        if (CLLocationManager.authorizationStatus() == .AuthorizedAlways || CLLocationManager.authorizationStatus() == .AuthorizedWhenInUse) {
             getLocation()
         }
     }
@@ -137,11 +162,11 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
     func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!) {
         println("CLLocation finished")
         self.locationManager.stopUpdatingLocation()
-        let newLocation = locations[0] as CLLocation
+        let newLocation = locations[0] as! CLLocation
         var distanceFromLast : Double?
         if let lastLocation = NSUserDefaults.standardUserDefaults().objectForKey("lastKnownLocation") as? NSData {
             
-            let lastKnownLocation = NSKeyedUnarchiver.unarchiveObjectWithData(lastLocation) as CLLocation
+            let lastKnownLocation = NSKeyedUnarchiver.unarchiveObjectWithData(lastLocation) as! CLLocation
             println("last known: \(lastKnownLocation)")
             distanceFromLast = newLocation.distanceFromLocation(lastKnownLocation)  //Fix issue of showing as 0
             
@@ -157,7 +182,7 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
             let geoCoder = CLGeocoder()
             geoCoder.reverseGeocodeLocation(newLocation, completionHandler: {(placemarks, error) -> Void in
                 if error == nil {
-                    let placemark = placemarks[0] as CLPlacemark
+                    let placemark = placemarks[0] as! CLPlacemark
                     self.requestWeatherData(placemark, isLocal: true)
   
                 } else {
@@ -168,57 +193,76 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
         }
     }
     
-    func updateWeatherData(index: Int, forceUpdate: Bool) {
-
-        let tag = weatherTags[index]
-        let weatherData = weatherDict[tag]
-        let lastUpdateTimestamp = NSTimeInterval(weatherData!.unixTime!)
-        let lapsedTime = NSDate().timeIntervalSince1970 - lastUpdateTimestamp
-
-        if (lapsedTime < minimumTimeSinceLastUpdate || forceUpdate == false ) {
-            var local = (index == 0) ? true : false
-            requestWeatherData(weatherData!.placemark!, isLocal: local)
+    //MARK: Weather Updates
+    
+    func updateWeatherData(currentIndex: Int?, forceUpdate: Bool) {
+        if let index = currentIndex {
+            let tag = weatherTags[index]
+            let weatherData = weatherDict[tag]
+            let lastUpdateTimestamp = NSTimeInterval(weatherData!.unixTime!)
+            let lapsedTime = NSDate().timeIntervalSince1970 - lastUpdateTimestamp
+            
+            if (lapsedTime < -600) {
+                if (lapsedTime < minimumTimeSinceLastUpdate || forceUpdate == true ) {
+                    var local = (index == 0) ? true : false
+                    requestWeatherData(weatherData!.placemark!, isLocal: local)
+                    println("updated weather")
+                } else {
+                    println("not updated")
+                }
+            } else {
+                println("Refreshing Too Soon")
+            }
         }
     }
     
     func requestWeatherData(placemark: CLPlacemark, isLocal: Bool) {
 
-        self.weatherRequester.getWeatherData(placemark, isLocal: true, completion: { (weatherData, tag) -> Void in
+        self.weatherRequester.getWeatherData(placemark, isLocal: true, completion: { (weatherData, tag, error) -> Void in
             
-            if (isLocal) {
-                // add or update location in the weather Dictionary with local tag key: 0
-                self.weatherDict[self.localTag] = weatherData
-                
-                // if the local tag is already in the weatherTags array, make sure it is first
-                if let index = find(self.weatherTags, self.localTag) {
-                    if index != 0 {
-                        self.weatherTags.removeAtIndex(index)
+            
+            if (error == nil) {
+                if (isLocal) {
+                    // add or update location in the weather Dictionary with local tag key: 0
+                    self.weatherDict[self.localTag] = weatherData
+                    
+                    // if the local tag is already in the weatherTags array, make sure it is first
+                    if let index = find(self.weatherTags, self.localTag) {
+                        if index != 0 {
+                            self.weatherTags.removeAtIndex(index)
+                            self.weatherTags.insert(self.localTag, atIndex: 0)
+                        }
+                    } else {
                         self.weatherTags.insert(self.localTag, atIndex: 0)
                     }
+                    
                 } else {
-                    self.weatherTags.insert(self.localTag, atIndex: 0)
+                    self.weatherDict[placemark.location.hash] = weatherData
+                    
+                    // if the tag is already in the list then leave it
+                    if let index = find(self.weatherTags, placemark.location.hash) {
+                        println("already in tags array")
+                    } else {
+                        self.weatherTags.append(placemark.location.hash)
+                    }
                 }
                 
-            } else {
-                self.weatherDict[placemark.hash] = weatherData
+                println("request finished: \(placemark.locality)")
                 
-                // if the tag is already in the list then leave it
-                if let index = find(self.weatherTags, placemark.hash) {
-                    println("already in tags array")
-                } else {
-                    self.weatherTags.append(placemark.hash)
-                }
-            }
-            
-            println("request finished: \(placemark.locality)")
-            
-            // store downloaded data
-            self.saveData(self.weatherDict, weatherTags: self.weatherTags)
+                // store downloaded data
+                self.saveData(self.weatherDict, weatherTags: self.weatherTags)
+                self.checkForStrayTags()
 
-            
-            dispatch_async(dispatch_get_main_queue(), { () -> Void in
-                self.collectionView!.reloadData()
-            })
+                
+                dispatch_async(dispatch_get_main_queue(), { () -> Void in
+                    self.collectionView!.reloadData()
+                })
+            } else {
+                
+                // Setup alert view to alert of weather request errors
+                println("error")
+                self.checkForStrayTags()
+            }
         })
     }
 
@@ -226,18 +270,36 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
     
     //MARK: Helper Methods
     
+    func checkForStrayTags() {
+        for (index, tag) in enumerate(self.weatherTags) {
+            if (self.weatherDict[tag] == nil) {
+                self.weatherTags.removeAtIndex(index)
+            }
+        }
+    }
+    
+    func viewBecameActive() {
+        getLocation()
+        
+        updateWeatherData(currentIndex, forceUpdate: false)
+    }
+    
+    
     func saveData(weatherDict: [Int : WeatherData], weatherTags: [Int]) {
         let data = NSKeyedArchiver.archivedDataWithRootObject(weatherDict)
         NSUserDefaults.standardUserDefaults().setObject(data, forKey: savedLocations)
         NSUserDefaults.standardUserDefaults().setObject(weatherTags, forKey: "weatherTags")
     }
-
+    
+    func saveTags(weatherTags: [Int]) {
+        NSUserDefaults.standardUserDefaults().setObject(weatherTags, forKey: "weatherTags")
+    }
+    
     
     func getImage(index: Int) -> UIImage {
         if (index < weatherTags.count) {
             let tag = weatherTags[index]
             let weatherData = weatherDict[tag] as WeatherData!
-            println("image retrieved: \(weatherData.imageString!)")
             
             return weatherImageFromString(weatherData.imageString!)
         }
@@ -288,7 +350,9 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
     }
     
     override func scrollViewDidScroll(scrollView: UIScrollView) {
-        
+        if scrollOffset == nil {
+            scrollOffset = 0.0
+        }
         // Calculate transition percentage.  current offset - starting offset / view width
         let transitionPercentage = abs(scrollView.contentOffset.x - scrollOffset!) / self.view.frame.width
         
@@ -305,7 +369,6 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
         var distanceSwiped = scrollView.contentOffset.x - scrollOffset!
         
         if (abs(distanceSwiped) > (self.view.bounds.width / 2)) {
-            println("cell changed")
             
             // Find horizontal center by halving frame width and offsetting by the scroll view.  Then grab the indexPath at that point
             let centerPoint = CGPointMake(self.collectionView!.frame.size.width / 2 + scrollView.contentOffset.x, self.collectionView!.frame.size.height / 2)
@@ -314,7 +377,7 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
             //update current page number
             pageControl.currentPage = currentIndexPath!.row
             currentIndex = currentIndexPath!.row
-            backgroundImageView.image = getImage(currentIndex)
+            backgroundImageView.image = getImage(currentIndex!)
             
             
             
@@ -338,18 +401,17 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
     }
     
     override func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath: indexPath) as WeatherViewCell
-
+        let cell = collectionView.dequeueReusableCellWithReuseIdentifier(reuseIdentifier, forIndexPath: indexPath) as! WeatherViewCell
         
+//        updateWeatherData(indexPath.row, forceUpdate: false)
         let tag = weatherTags[indexPath.row]
         
         if let weatherData = weatherDict[tag] {
-            cell.currentTemperatureLabel.text = "\(weatherData.temperature!)"
+            cell.currentTemperatureLabel!.text = "\(weatherData.temperature!)"
             cell.locationNameLabel.text = weatherData.locationName
             cell.currentSummaryLabel.text = weatherData.summary
             toImage = getImage(indexPath.row)
             nextImageView.image = toImage
-            println("cell loaded: \(weatherData.imageString!)")
         
         } else {
             println("did not assign")
@@ -388,22 +450,14 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
 //        return blurredImage
 //    }
     
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        if (segue.identifier == "showLocationsList" ) {
-            let vc = segue.destinationViewController as LocationsTableViewController
-//            vc.backgroundImage = freezeImage()
-            vc.weatherTags = self.weatherTags
-            vc.weatherDict = self.weatherDict
-            vc.delegate = self
-            println("adding tags to tableView")
-        }
-    }
+
 
    //MARK: Locations Table View Delegate Methods 
     
     
     func didAddLocation(placemark: CLPlacemark) {
         
+        self.weatherTags.append(placemark.location.hash)
         requestWeatherData(placemark, isLocal: false)
         collectionView?.reloadData()
         println("delegate called")
@@ -411,9 +465,14 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
     }
     
     func didDeleteLocation(tag: Int) {
-        weatherDict.removeValueForKey(tag)
-        let tagIndex = find(weatherTags, tag)
-        weatherTags.removeAtIndex(tagIndex!)
+
+        if let tagIndex = find(weatherTags, tag) {
+            weatherTags.removeAtIndex(tagIndex)
+        }
+        
+        if (weatherDict[tag] != nil) {
+            weatherDict.removeValueForKey(tag)
+        }
         saveData(weatherDict, weatherTags: weatherTags)
         collectionView?.reloadData()
     }
@@ -422,14 +481,47 @@ class WeatherViewController: UICollectionViewController, UICollectionViewDataSou
         self.weatherTags = weatherTags
         collectionView?.reloadData()
     }
+    
+    func didSelectLocationFromList(tag: Int) {
+        let index = find(weatherTags, tag)
+        self.collectionView!.selectItemAtIndexPath(NSIndexPath(forItem: index!, inSection: 0), animated: false, scrollPosition: .CenteredHorizontally)
+    }
 
     //MARK: Buttons
+    
+    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+//        if (segue.identifier == "showLocationsList" ) {
+            let vc = segue.destinationViewController as! LocationsTableViewController
+            vc.weatherTags = self.weatherTags
+            vc.weatherDict = self.weatherDict
+            vc.delegate = self
+            
+            // Transition Animation
+            
+            let sourceController = segue.sourceViewController as! WeatherViewController
+            
+            vc.transitioningDelegate = self.transitionManager
+            self.transitionManager.locationsListController = vc
+            
+            
+//        }
+    }
     
     
     @IBAction func refreshWasPressed(sender: UIBarButtonItem) {
         
         getLocation()
+        updateWeatherData(currentIndex, forceUpdate: true)
         self.collectionView!.reloadData()
+        
+    }
+    
+    @IBAction func addWasPressed(sender: UIButton) {
+        performSegueWithIdentifier("showLocationsList", sender: self)
+    }
+    
+    @IBAction func unwindFromList(sender: UIStoryboardSegue) {
+//        self.dismissViewControllerAnimated(true, completion:nil)
         
     }
 }
