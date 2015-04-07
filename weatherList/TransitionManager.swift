@@ -14,15 +14,7 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
     private var presenting : Bool = false
     private var interactive : Bool = false
     private var dismissPanGesture : UIPanGestureRecognizer!
-    
-    var sourceViewController : WeatherViewController! {
-        didSet {
-        self.dismissPanGesture = UIPanGestureRecognizer()
-        self.dismissPanGesture.addTarget(self, action: "handleDismissPan:")
-        self.sourceViewController.view.addGestureRecognizer(self.dismissPanGesture)
-        }
-    }
-    
+     
     var locationsListController : LocationsTableViewController!
 
     
@@ -60,7 +52,7 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
                 if (self.presenting) {
                     self.swipeMainOffFrame(weatherViewController)
                     self.swipeInList(locationsListController)
-                    weatherViewController.collectionView?.scrollEnabled = false
+
 
                 } else {
                     self.returnToFrame(weatherViewController)
@@ -70,7 +62,7 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
             }, completion: { finished in
                 
                 if (transitionContext.transitionWasCancelled()) {
-                    println("canceled")
+                    println("cancelled")
                     transitionContext.completeTransition(false)
 
                 } else {
@@ -80,7 +72,13 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
                     if (self.presenting) {
                         UIApplication.sharedApplication().keyWindow?.addSubview(screens.from.view)
                         self.addTapGesture(weatherViewController)
+                        self.changeButtonControl(weatherViewController, presenting: true)
+                        weatherViewController.collectionView?.scrollEnabled = false
+                        self.setPanGesture(weatherViewController)
+                        
                     } else {
+                        self.changeButtonControl(weatherViewController, presenting: false)
+                        weatherViewController.view.removeGestureRecognizer(self.dismissPanGesture)
                          weatherViewController.collectionView?.scrollEnabled = true
                     }
                 }
@@ -106,6 +104,20 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
     
     //MARK: Helper Methods
     
+    func changeButtonControl(weatherViewController: WeatherViewController, presenting: Bool) {
+
+        weatherViewController.addLocationsButton.target = nil
+        
+        if (presenting) {
+            weatherViewController.addLocationsButton.target = self
+            weatherViewController.addLocationsButton.action = "handleButtonPress"
+
+        } else {
+            weatherViewController.addLocationsButton.target = weatherViewController
+            weatherViewController.addLocationsButton.action = "addWasPressed:"
+        }
+    }
+    
     func addTapGesture(weatherViewController: WeatherViewController) {
         let tapGesture = UITapGestureRecognizer()
         tapGesture.addTarget(self, action: "handleTapGesture:")
@@ -113,8 +125,14 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
         
     }
     
+    func setPanGesture(weatherViewController: WeatherViewController) {
+        self.dismissPanGesture = UIPanGestureRecognizer()
+        self.dismissPanGesture.addTarget(self, action: "handleDismissPan:")
+        weatherViewController.view.addGestureRecognizer(self.dismissPanGesture)
+    }
+    
     func swipeMainOffFrame(weatherViewController: WeatherViewController) {
-        weatherViewController.view.transform = offFrame(-weatherViewController.view.frame.width + 40)
+        weatherViewController.view.transform = offFrame(-weatherViewController.view.frame.width + 50)
         
     }
     
@@ -128,7 +146,7 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
     }
     
     func swipeInList(locationsListController : LocationsTableViewController) {
-        locationsListController.view.transform = offFrame(40)
+        locationsListController.view.transform = offFrame(50)
         
     }
     
@@ -164,6 +182,10 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
             }
         }
         
+    }
+    
+    func handleButtonPress() {
+        self.locationsListController.performSegueWithIdentifier("dismissList", sender: self)
     }
     
     func handleTapGesture(tap: UITapGestureRecognizer) {

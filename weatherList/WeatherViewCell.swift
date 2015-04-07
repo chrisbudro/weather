@@ -21,6 +21,10 @@ import UIKit
     @IBOutlet weak var currentPrecipLabel: UILabel!
     @IBOutlet weak var currentWindLabel: UILabel!
     
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
+    @IBOutlet weak var lastUpdateTimeLabel: UILabel!
+    
+    
 
 }
 

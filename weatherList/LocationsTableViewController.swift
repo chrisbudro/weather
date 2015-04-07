@@ -12,25 +12,33 @@ import CoreLocation
 
 protocol LocationsTableViewControllerDelegate  {
     
-    func didDeleteLocation(tag: Int)
-    func didAddLocation(placemark: CLPlacemark)
-    func didArrangeList(weatherTags: [Int])
-    func didSelectLocationFromList(tag: Int)
+    func didDeleteLocation(placeID: String)
+    func didAddLocation(placeDetails: (description: String, placeID: String))
+    func didArrangeList(weatherPlaceIDs: [String])
+    func didSelectLocationFromList(placeID: String)
     
     
 }
 
 class LocationsTableViewController: UITableViewController, UITableViewDelegate, UITableViewDataSource, UISearchBarDelegate, UISearchControllerDelegate, UISearchResultsUpdating {
     
+    
+    
+    private struct Constants {
+        static let cell = "Cell"
+        static let segueDismissList = "dismissList"
+        
+    }
+    
     var searchResults: String?
     let geoCoder = CLGeocoder()
-    var placemarks = []
+    var placemarks : [(description: String, placeID: String)] = []
     let searchResultsView = UITableViewController()
     var results: NSMutableArray?
     var searchController : UISearchController?
     var delegate : LocationsTableViewControllerDelegate?
-    var weatherDict : [Int : WeatherData]?
-    var weatherTags : [Int]?
+    var weatherDict : [String : WeatherData]?
+    var weatherPlaceIDs : [String]?
     
 
     
@@ -51,16 +59,15 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         self.searchController!.searchBar.showsCancelButton = false
         self.navigationItem.titleView = searchController!.searchBar
 
-        
         let resultsTableView = UITableView(frame: self.tableView.frame)
         self.searchResultsView.tableView = resultsTableView
         self.searchResultsView.tableView.dataSource = self
         self.searchResultsView.tableView.delegate = self
-        self.searchResultsView.navigationController?.navigationBarHidden = true
+//        self.searchResultsView.navigationController?.navigationBarHidden = true
         self.definesPresentationContext = true
         
         // Instantiate Table View Cell
-        self.searchResultsView.tableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+        self.searchResultsView.tableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: Constants.cell)
         
         // Table Header
         
@@ -69,7 +76,7 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         
         
         
-        tableView.frame.size.width = self.view.frame.size.width - 40
+        tableView.frame.size.width = self.view.frame.size.width - 50
         searchController!.searchBar.frame = CGRectMake(0, 0, self.tableView.frame.size.width, 44)
         searchController!.searchBar.backgroundColor = UIColor.lightGrayColor()
         
@@ -80,70 +87,68 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         
         tableView.tableHeaderView = searchController!.searchBar
         
-        
-        
-        
-        
-        
-        
-//        id barButtonAppearanceInSearchBar = [UIBarButtonItem appearanceWhenContainedIn:[UISearchBar class], nil];
-//        
-//        [barButtonAppearanceInSearchBar setBackgroundImage:grayBackgroundImage forState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
-//        [barButtonAppearanceInSearchBar setTitleTextAttributes:@{
-//            UITextAttributeFont : [UIFont fontWithName:@"HelveticaNeue-CondensedBold" size:20],
-//            UITextAttributeTextColor : [UIColor blackColor]
-//        } forState:UIControlStateNormal];
-//        [barButtonAppearanceInSearchBar setTitle:@"X"];
-        
     }
 
 
     // MARK: - Search Bar Data source
     
-    
-    
     func searchBarTextDidBeginEditing(searchBar: UISearchBar) {
-        println("begin editing")
-        searchController!.searchBar.frame = CGRectMake(-40, 0, self.tableView.frame.size.width, 44)
+        
+        // adjust position of search bar when it becomes first responder - bug needs to be figure out
+        searchController!.searchBar.frame = CGRectMake(-50, 0, self.tableView.frame.size.width, 44)
     }
     
     func updateSearchResultsForSearchController(searchController: UISearchController) {
 
-        
-        geoCodeString(searchController.searchBar.text)
+        searchForGooglePlaces(searchController.searchBar.text)
         self.searchResultsView.tableView.reloadData()
         
     }
 
-    func geoCodeString(locationString: String) {
+    func searchForGooglePlaces(locationString: String) {
         if (locationString.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) > 0) {
-            self.geoCoder.geocodeAddressString(locationString, completionHandler: { (placemarks, error) -> Void in
-                
+            println(locationString)
+            
+            let apiKey = "AIzaSyAyeGkrgfIa2Ov7Kb8Hzr2pHOYNMPytlWc"
+            let placeType = "(cities)"
+            let strippedLocationString = locationString.stringByReplacingOccurrencesOfString(" ", withString: "", options: nil, range: nil)
+            
+            let placesRequestURL = NSURL(string: "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=\(strippedLocationString)&types=\(placeType)&key=\(apiKey)")
+            let sharedSession = NSURLSession.sharedSession()
+            let downloadTask : NSURLSessionDownloadTask = sharedSession.downloadTaskWithURL(placesRequestURL!, completionHandler: { (places : NSURL!, response: NSURLResponse!, error: NSError!) -> Void in
                 if (error == nil) {
-                    self.placemarks = placemarks
+                    let data = NSData(contentsOfURL: places, options: nil, error: nil)
+                    let placesJSON = NSJSONSerialization.JSONObjectWithData(data!, options: nil, error: nil) as! NSDictionary
+                    let predictions = placesJSON["predictions"] as! NSArray
+                    var placeList : [(description: String, placeID: String)] = []
+                    for prediction in predictions {
+                        let predictionDescription = prediction["description"] as! String
+                        let predictionPlaceID = prediction["place_id"] as! String
+                        let predictionDetails : (description: String, placeID: String) = (predictionDescription, predictionPlaceID)
+                            placeList.append(predictionDetails)
+                    }
+                    self.placemarks = placeList
+                    
                 } else {
                     self.placemarks = []
-                    println(error)
+                    println("error: \(error)")
                 }
             })
+            downloadTask.resume()
         }
     }
     
     func searchBarSearchButtonClicked(searchBar: UISearchBar) {
         self.searchResults = searchBar.text
-        if (self.placemarks.count != 0) {
-            self.delegate?.didAddLocation(self.placemarks[0] as! CLPlacemark)
-        }
+        searchForGooglePlaces(searchBar.text)
         searchBar.resignFirstResponder()
-        searchBar.text = ""
-        self.searchController?.dismissViewControllerAnimated(true, completion: nil)
+    
     }
     
     
      func searchBarCancelButtonClicked(searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
-        self.searchController?.dismissViewControllerAnimated(true, completion: nil)
-        
+        searchBar.text = ""
     }
 
 
@@ -155,9 +160,9 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if (tableView == self.tableView) {
-            return weatherTags!.count
+            return weatherPlaceIDs!.count
         }
-        if (tableView == self.searchResultsView.tableView) {
+        else if (tableView == self.searchResultsView.tableView) {
             return placemarks.count
         }
         return 0
@@ -165,13 +170,13 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
 
     
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier("Cell", forIndexPath: indexPath) as! UITableViewCell
+        let cell = tableView.dequeueReusableCellWithIdentifier(Constants.cell, forIndexPath: indexPath) as! UITableViewCell
         
         if (tableView == self.tableView ) {
             
-            let tag = weatherTags![indexPath.row]
+            let placeID = weatherPlaceIDs![indexPath.row]
             
-            if let location = weatherDict![tag] as WeatherData! {
+            if let location = weatherDict![placeID] as WeatherData! {
                 cell.textLabel!.text = location.locationName
                 cell.backgroundColor = UIColor.clearColor()
                 cell.textLabel!.textColor = UIColor.blackColor()
@@ -182,30 +187,27 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
                 cell.selectionStyle = .None
             }
         }
-        
-        if (tableView == self.searchResultsView.tableView) {
+        else if (tableView == self.searchResultsView.tableView) {
     
             if (self.placemarks.count > indexPath.row) {
-                if let placemark = self.placemarks[indexPath.row] as? CLPlacemark {
-                    println("placemark: \(placemark)")
-                    cell.textLabel!.text = "\(placemark.locality), \(placemark.administrativeArea)"
+                let placeDetails = placemarks[indexPath.row]
+                cell.textLabel!.text = placeDetails.description
                 }
-            }
         }
         return cell
     }
 
     override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         
-        var tag : Int?
+        var placeID : String?
         
         if (tableView == self.searchResultsView.tableView) {
             if (self.placemarks.count > indexPath.row) {
-                let placemark = self.placemarks[indexPath.row] as! CLPlacemark
-                self.delegate?.didAddLocation(placemark)
-                weatherTags!.append(placemark.location.hash)
+                let placeDetails = self.placemarks[indexPath.row]
+                placeID = placeDetails.placeID
+                self.delegate?.didAddLocation(placeDetails)
+                weatherPlaceIDs!.append(placeID!)
                 searchController?.searchBar.text = ""
-                tag = placemark.location.hash
                 
             } else {
                 println("Placemarker for UIAlert View:  An error has occured please try adding the location again")
@@ -214,11 +216,11 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
             self.placemarks = []
             
         } else if (tableView == self.tableView) {
-            tag = weatherTags![indexPath.row]
+            placeID = weatherPlaceIDs![indexPath.row]
         }
         
-        self.delegate?.didSelectLocationFromList(tag!)
-        performSegueWithIdentifier("dismissList", sender: self)
+        self.delegate?.didSelectLocationFromList(placeID!)
+        performSegueWithIdentifier(Constants.segueDismissList, sender: self)
         self.tableView.reloadData()
     }
 
@@ -247,9 +249,9 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         if editingStyle == .Delete {
             // Delete the row from the data source
             tableView.beginUpdates()
-            let tag = weatherTags![indexPath.row]
-            self.delegate?.didDeleteLocation(tag)
-            weatherTags!.removeAtIndex(indexPath.row)
+            let placeID = weatherPlaceIDs![indexPath.row]
+            self.delegate?.didDeleteLocation(placeID)
+            weatherPlaceIDs?.removeAtIndex(indexPath.row)
             tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
             tableView.endUpdates()
                 
@@ -261,14 +263,14 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     override func tableView(tableView: UITableView, moveRowAtIndexPath fromIndexPath: NSIndexPath, toIndexPath: NSIndexPath) {
         
         tableView.beginUpdates()
-        let movedItem = weatherTags![fromIndexPath.row]
-        weatherTags?.removeAtIndex(fromIndexPath.row)
-        weatherTags?.insert(movedItem, atIndex: toIndexPath.row)
+        let movedItem = weatherPlaceIDs![fromIndexPath.row]
+        weatherPlaceIDs?.removeAtIndex(fromIndexPath.row)
+        weatherPlaceIDs?.insert(movedItem, atIndex: toIndexPath.row)
         tableView.endUpdates()
         
         tableView.reloadData()
         
-        self.delegate?.didArrangeList(weatherTags!)
+        self.delegate?.didArrangeList(weatherPlaceIDs!)
         
     }
 

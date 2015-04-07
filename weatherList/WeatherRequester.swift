@@ -25,10 +25,9 @@ class WeatherRequester: NSObject {
         self.baseURL = NSURL(string: "https://api.forecast.io/forecast/\(self.apiKey)/")!
     }
    
-    func getWeatherData(placemark: CLPlacemark, isLocal: Bool, completion: (weatherData : WeatherData?, tag : Int?, error: NSError!) -> Void) {
+    func getWeatherData(placeDetails: (description: String, placeID: String), coordinates: String, isLocal: Bool, completion: (weatherData : WeatherData?, placeID: String, error: NSError!) -> Void) {
 
     
-        let coordinates = "\(placemark.location.coordinate.latitude),\(placemark.location.coordinate.longitude)"
         let forecastURL = NSURL(string: coordinates, relativeToURL:baseURL)
         let sharedSession = NSURLSession.sharedSession()
         let downloadTask: NSURLSessionDownloadTask = sharedSession.downloadTaskWithURL(forecastURL!, completionHandler: { (location: NSURL!, response:NSURLResponse!, error: NSError!) -> Void in
@@ -37,21 +36,20 @@ class WeatherRequester: NSObject {
                 let data = NSData(contentsOfURL: location, options: nil, error: nil)
                 let weatherJSON : NSDictionary = NSJSONSerialization.JSONObjectWithData(data!, options: nil, error: nil) as! NSDictionary
                 
-                let weatherData = self.dataFromRequest(placemark, weatherJSON: weatherJSON) as WeatherData
-                completion(weatherData: weatherData, tag: placemark.location.hash, error: nil)
+                let weatherData = self.dataFromRequest(placeDetails.description, weatherJSON: weatherJSON) as WeatherData
+                completion(weatherData: weatherData, placeID: placeDetails.placeID, error: nil)
                 
 
             } else {
-                completion(weatherData: nil, tag: nil, error: error)
+                completion(weatherData: nil, placeID: "", error: error)
                 println(error)
             }
         })
         downloadTask.resume()
     }
     
-
-
-    func dataFromRequest(placemark: CLPlacemark, weatherJSON: NSDictionary) -> WeatherData {
+    
+    func dataFromRequest(placeDescription: String, weatherJSON: NSDictionary) -> WeatherData {
         
         let currentWeather = weatherJSON["currently"] as! NSDictionary
         let data = WeatherData()
@@ -65,21 +63,53 @@ class WeatherRequester: NSObject {
         
         let iconString = currentWeather["icon"] as! String
         
-        data.placemark = placemark
-        data.locationName = "\(placemark.locality), \(placemark.administrativeArea)"
+        
+        
+        data.locationName = placeDescription
         data.temperature = currentWeather["apparentTemperature"] as? Int
         data.humidity = currentWeather["humidity"] as? Double
-        data.precip = currentWeather["precipProbability"] as? Double
+        if let precip = currentWeather["precipProbability"] as? Double {
+            let precipPercent = precip * 100
+            data.precip = Int(precipPercent)
+        }
+        
         data.summary = currentWeather["summary"] as? String
 
-        data.wind = currentWeather["windSpeed"] as? Double
+        if let wind = currentWeather["windSpeed"] as? Double {
+            let windAsInteger = Int(round(wind))
+            data.wind = windAsInteger
+        }
+        
         data.unixTime = currentWeather["time"] as? Int
         data.imageString = currentWeather["icon"] as? String
         data.image = weatherImageFromString(iconString)
         println("icon: \(data.image)")
-        return data
+        
     
+        // Daily Weather
+        
+        let dailyWeather = weatherJSON["daily"] as! NSDictionary
+        
+        let weatherDetails = dailyWeather["data"] as! NSArray
+        let todayDetails = weatherDetails[1] as! NSDictionary
+        
+        let minTemp = todayDetails["apparentTemperatureMin"] as? Double
+        data.currentDayLowTemp = Int(minTemp!)
+        
+        let maxTemp = todayDetails["apparentTemperatureMax"] as? Double
+        data.currentDayHighTemp = Int(maxTemp!)
+        
+        return data
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     func weatherImageFromString(stringIcon: String) -> UIImage {
         var imageName: String
@@ -113,6 +143,17 @@ class WeatherRequester: NSObject {
         var iconImage = UIImage(named: imageName)
         return iconImage!
         
+        
+    }
+    
+    func dateStringFromUnixTime(unixTime: Int) -> String {
+        let timeInSeconds = NSTimeInterval(unixTime)
+        let weatherDate = NSDate(timeIntervalSince1970: timeInSeconds)
+        
+        let dateFormatter = NSDateFormatter()
+        dateFormatter.timeStyle = .ShortStyle
+        let dateString = dateFormatter.stringFromDate(weatherDate) as String
+        return dateString
         
     }
     
