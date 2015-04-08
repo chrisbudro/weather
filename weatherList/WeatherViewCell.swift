@@ -24,6 +24,7 @@ import UIKit
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     @IBOutlet weak var lastUpdateTimeLabel: UILabel!
     
+    @IBOutlet weak var currentWeatherView: UIView!
     
 
 }

@@ -6,27 +6,40 @@
 //  Copyright (c) 2015 chrisbudro. All rights reserved.
 //
 
-import UIKit
+import CoreLocation
 
-class GooglePlacesRequester: NSObject {
+
+class PlacesRequester: NSObject {
    
+    private var apiKey : String?
+    var placeType = "(cities)"
+    private let baseURL = "https://maps.googleapis.com/maps/api/place/"
+    
+    override init() {
+        let pathToFile = NSBundle.mainBundle().pathForResource("APIKeys", ofType: "plist")
+        let keys = NSDictionary(contentsOfFile: pathToFile!)
+        if let key = keys!["places"] as? String {
+            self.apiKey = key
+        }
+        println("api key: \(apiKey)")
+        super.init()
+    }
     
     
+    // Add safety with If Let statements for parsing results
     
-    func searchForGooglePlaces(locationString: String) {
-        if (locationString.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) > 0) {
-            println(locationString)
-            
-            let apiKey = "AIzaSyAyeGkrgfIa2Ov7Kb8Hzr2pHOYNMPytlWc"
-            let placeType = "(cities)"
+    func getAutoCompleteResults(locationString: String, completion: (placeList: [(description: String, placeID: String)], error: NSError!) -> Void ) {
+        if (locationString.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) > 0 && apiKey != nil) {
+
             let strippedLocationString = locationString.stringByReplacingOccurrencesOfString(" ", withString: "", options: nil, range: nil)
             
-            let placesRequestURL = NSURL(string: "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=\(strippedLocationString)&types=\(placeType)&key=\(apiKey)")
+            let placesRequestURL = NSURL(string: baseURL + "autocomplete/json?input=\(strippedLocationString)&types=\(placeType)&key=\(apiKey!)")
             let sharedSession = NSURLSession.sharedSession()
             let downloadTask : NSURLSessionDownloadTask = sharedSession.downloadTaskWithURL(placesRequestURL!, completionHandler: { (places : NSURL!, response: NSURLResponse!, error: NSError!) -> Void in
                 if (error == nil) {
                     let data = NSData(contentsOfURL: places, options: nil, error: nil)
                     let placesJSON = NSJSONSerialization.JSONObjectWithData(data!, options: nil, error: nil) as! NSDictionary
+                    println("place JSON: \(placesJSON)")
                     let predictions = placesJSON["predictions"] as! NSArray
                     var placeList : [(description: String, placeID: String)] = []
                     for prediction in predictions {
@@ -35,35 +48,25 @@ class GooglePlacesRequester: NSObject {
                         let predictionDetails : (description: String, placeID: String) = (predictionDescription, predictionPlaceID)
                         placeList.append(predictionDetails)
                     }
-                    self.placemarks = placeList
+                    
+                    completion(placeList: placeList, error: nil)
                     
                 } else {
-                    self.placemarks = []
-                    println("error: \(error)")
+                    completion(placeList: [], error: error)
                 }
             })
             downloadTask.resume()
         }
     }
     
-    func geocodePlaceID(placeID: Int) {
-        
-        
-    }
     
-    
-    func requestPlaceCoordinates(placeID: String, completion: (coordinates: String) -> Void) {
-        let apiKey = "AIzaSyAyeGkrgfIa2Ov7Kb8Hzr2pHOYNMPytlWc"
-        let placeRequestURL = NSURL(string: "https://maps.googleapis.com/maps/api/place/details/json?placeid=\(placeID)&key=\(apiKey)")
-        
-        
-        
+    func getPlaceCoordinates(placeID: String, completion: (coordinates: String, error: NSError!) -> Void) {
+
+        let placeRequestURL = NSURL(string: baseURL + "details/json?placeid=\(placeID)&key=\(apiKey!)")
         let downloadTask : NSURLSessionDownloadTask = NSURLSession.sharedSession().downloadTaskWithURL(placeRequestURL!, completionHandler: { (placeData : NSURL!, response: NSURLResponse!, error: NSError!) -> Void in
             if (error == nil) {
                 let data = NSData(contentsOfURL: placeData, options: nil, error: nil)
                 let placeJSON = NSJSONSerialization.JSONObjectWithData(data!, options: nil, error: nil) as! NSDictionary
-                println("JSON: \(placeJSON)")
-                
                 let placeResult = placeJSON["result"] as! NSDictionary
                 let placeGeometry = placeResult["geometry"] as! NSDictionary
                 let placeCoordinate = placeGeometry["location"] as! NSDictionary
@@ -71,14 +74,29 @@ class GooglePlacesRequester: NSObject {
                 let longitude = placeCoordinate["lng"] as? Double
                 let coordinates = "\(latitude!),\(longitude!)"
                 
-                completion(coordinates: coordinates)
+                completion(coordinates: coordinates, error: nil)
             } else {
-                println("error: \(error)")
+                completion(coordinates: "", error: error)
             }
         })
         downloadTask.resume()
+    }
+    
+    func geoCodeCurrentLocation(coreLocation: CLLocation, completion: (description: String, coordinates: String, error: NSError!) -> Void) {
+        let geoCoder = CLGeocoder()
+        geoCoder.reverseGeocodeLocation(coreLocation, completionHandler: {(placemarks, error) -> Void in
+            if error == nil {
+                let placemark = placemarks[0] as! CLPlacemark
+                let placeDescription = "\(placemark.locality), \(placemark.administrativeArea)"
+                let coordinates = "\(placemark.location.coordinate.latitude),\(placemark.location.coordinate.longitude)"
+                
+                completion(description: placeDescription, coordinates: coordinates, error: nil)
+            } else {
+                completion(description: "", coordinates: "", error: error)
+            }
+        })
+        
         
         
     }
-    
 }

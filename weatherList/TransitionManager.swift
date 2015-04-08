@@ -39,7 +39,8 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
         let duration = self.transitionDuration(transitionContext)
         
         if (self.presenting) {
-            self.swipeListOffFrame(locationsListController)
+//            self.swipeListOffFrame(locationsListController)
+            self.swipeInList(locationsListController)
             weatherView.layer.shadowColor = UIColor.blackColor().CGColor
             weatherView.layer.shadowOffset = CGSizeMake(2.0, 2.0)
             weatherView.layer.shadowOpacity = 0.8
@@ -56,7 +57,7 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
 
                 } else {
                     self.returnToFrame(weatherViewController)
-                    self.returnList(locationsListController)
+//                    self.returnList(locationsListController)
                 }
             
             }, completion: { finished in

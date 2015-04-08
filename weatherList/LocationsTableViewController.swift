@@ -10,16 +10,6 @@ import UIKit
 import CoreLocation
 
 
-protocol LocationsTableViewControllerDelegate  {
-    
-    func didDeleteLocation(placeID: String)
-    func didAddLocation(placeDetails: (description: String, placeID: String))
-    func didArrangeList(weatherPlaceIDs: [String])
-    func didSelectLocationFromList(placeID: String)
-    
-    
-}
-
 class LocationsTableViewController: UITableViewController, UITableViewDelegate, UITableViewDataSource, UISearchBarDelegate, UISearchControllerDelegate, UISearchResultsUpdating {
     
     
@@ -30,25 +20,23 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         
     }
     
+    let weatherAPI = WeatherAPI.sharedInstance
+    
     var searchResults: String?
     let geoCoder = CLGeocoder()
-    var placemarks : [(description: String, placeID: String)] = []
+    var autoCompleteResults : [(description: String, placeID: String)] = []
     let searchResultsView = UITableViewController()
-    var results: NSMutableArray?
+//    var results: NSMutableArray?
     var searchController : UISearchController?
-    var delegate : LocationsTableViewControllerDelegate?
-    var weatherDict : [String : WeatherData]?
-    var weatherPlaceIDs : [String]?
-    
+    var currentIndex : Int?
+    var weatherLocations : [WeatherData] {
+        return weatherAPI.getLocations()
+    }
 
-    
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        
-        
-        
+ 
         // Instantiate Search Controller
         self.searchController = UISearchController(searchResultsController: searchResultsView)
         self.searchController!.searchResultsUpdater = self
@@ -76,7 +64,8 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         
         
         
-        tableView.frame.size.width = self.view.frame.size.width - 50
+        tableView.frame.size.width = UIApplication.sharedApplication().keyWindow!.frame.size.width - 50
+        tableView.frame.size.height = UIApplication.sharedApplication().keyWindow!.frame.size.height
         searchController!.searchBar.frame = CGRectMake(0, 0, self.tableView.frame.size.width, 44)
         searchController!.searchBar.backgroundColor = UIColor.lightGrayColor()
         
@@ -100,47 +89,14 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     
     func updateSearchResultsForSearchController(searchController: UISearchController) {
 
-        searchForGooglePlaces(searchController.searchBar.text)
+        getAutoCompleteResults(searchController.searchBar.text)
         self.searchResultsView.tableView.reloadData()
-        
     }
 
-    func searchForGooglePlaces(locationString: String) {
-        if (locationString.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) > 0) {
-            println(locationString)
-            
-            let apiKey = "AIzaSyAyeGkrgfIa2Ov7Kb8Hzr2pHOYNMPytlWc"
-            let placeType = "(cities)"
-            let strippedLocationString = locationString.stringByReplacingOccurrencesOfString(" ", withString: "", options: nil, range: nil)
-            
-            let placesRequestURL = NSURL(string: "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=\(strippedLocationString)&types=\(placeType)&key=\(apiKey)")
-            let sharedSession = NSURLSession.sharedSession()
-            let downloadTask : NSURLSessionDownloadTask = sharedSession.downloadTaskWithURL(placesRequestURL!, completionHandler: { (places : NSURL!, response: NSURLResponse!, error: NSError!) -> Void in
-                if (error == nil) {
-                    let data = NSData(contentsOfURL: places, options: nil, error: nil)
-                    let placesJSON = NSJSONSerialization.JSONObjectWithData(data!, options: nil, error: nil) as! NSDictionary
-                    let predictions = placesJSON["predictions"] as! NSArray
-                    var placeList : [(description: String, placeID: String)] = []
-                    for prediction in predictions {
-                        let predictionDescription = prediction["description"] as! String
-                        let predictionPlaceID = prediction["place_id"] as! String
-                        let predictionDetails : (description: String, placeID: String) = (predictionDescription, predictionPlaceID)
-                            placeList.append(predictionDetails)
-                    }
-                    self.placemarks = placeList
-                    
-                } else {
-                    self.placemarks = []
-                    println("error: \(error)")
-                }
-            })
-            downloadTask.resume()
-        }
-    }
     
     func searchBarSearchButtonClicked(searchBar: UISearchBar) {
         self.searchResults = searchBar.text
-        searchForGooglePlaces(searchBar.text)
+        getAutoCompleteResults(searchBar.text)
         searchBar.resignFirstResponder()
     
     }
@@ -149,6 +105,39 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
      func searchBarCancelButtonClicked(searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
         searchBar.text = ""
+    }
+    
+    
+    //MARK: Helper Methods 
+    
+    func getAutoCompleteResults(searchTerm: String) {
+        weatherAPI.getAutoCompleteResults(searchTerm, completion: { (placeList, error) -> Void in
+            if error == nil {
+                self.autoCompleteResults = placeList
+                println("placeList: \(placeList)")
+            } else {
+                println("autocomplete error: \(error)")
+            }
+        })
+    }
+    
+    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+        if segue.identifier == Constants.segueDismissList {
+            let vc = segue.destinationViewController as! WeatherViewController
+            if let index = currentIndex {
+                vc.currentIndex = index
+                currentIndex = nil
+            }
+        }
+    }
+    
+    @IBAction func editWasPressed(sender: UIBarButtonItem) {
+        tableView.editing = true
+        tableView.reloadData()
+    }
+    
+    func doneWasPressed(sender: AnyObject) {
+        
     }
 
 
@@ -160,10 +149,10 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if (tableView == self.tableView) {
-            return weatherPlaceIDs!.count
+            return weatherLocations.count
         }
         else if (tableView == self.searchResultsView.tableView) {
-            return placemarks.count
+            return autoCompleteResults.count
         }
         return 0
     }
@@ -174,23 +163,22 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         
         if (tableView == self.tableView ) {
             
-            let placeID = weatherPlaceIDs![indexPath.row]
+            let location = weatherLocations[indexPath.row]
             
-            if let location = weatherDict![placeID] as WeatherData! {
                 cell.textLabel!.text = location.locationName
                 cell.backgroundColor = UIColor.clearColor()
                 cell.textLabel!.textColor = UIColor.blackColor()
-            }
             
-            if (indexPath.row == 0) {
+            
+            if (indexPath.row == 0 && weatherAPI.locationServicesEnabled) {
                 cell.accessoryType = .Checkmark
                 cell.selectionStyle = .None
             }
         }
         else if (tableView == self.searchResultsView.tableView) {
     
-            if (self.placemarks.count > indexPath.row) {
-                let placeDetails = placemarks[indexPath.row]
+            if (self.autoCompleteResults.count > indexPath.row) {
+                let placeDetails = autoCompleteResults[indexPath.row]
                 cell.textLabel!.text = placeDetails.description
                 }
         }
@@ -199,38 +187,33 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
 
     override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         
-        var placeID : String?
-        
-        if (tableView == self.searchResultsView.tableView) {
-            if (self.placemarks.count > indexPath.row) {
-                let placeDetails = self.placemarks[indexPath.row]
-                placeID = placeDetails.placeID
-                self.delegate?.didAddLocation(placeDetails)
-                weatherPlaceIDs!.append(placeID!)
+        if (tableView == self.tableView) {
+            // set updated index for collection view to scroll to
+            currentIndex = indexPath.row
+            
+        } else if (tableView == self.searchResultsView.tableView) {
+            if (self.autoCompleteResults.count > indexPath.row) {
+                let placeDetails = self.autoCompleteResults[indexPath.row]
+                weatherAPI.createLocation(placeDetails)
                 searchController?.searchBar.text = ""
+                currentIndex = weatherLocations.count - 1
                 
             } else {
                 println("Placemarker for UIAlert View:  An error has occured please try adding the location again")
             }
-            
-            self.placemarks = []
-            
-        } else if (tableView == self.tableView) {
-            placeID = weatherPlaceIDs![indexPath.row]
+            autoCompleteResults = []
         }
         
-        self.delegate?.didSelectLocationFromList(placeID!)
         performSegueWithIdentifier(Constants.segueDismissList, sender: self)
         self.tableView.reloadData()
     }
 
     
-    // Override to support conditional editing of the table view.
-
+    //MARK: Table View Editing
     
     override func tableView(tableView: UITableView, canEditRowAtIndexPath indexPath: NSIndexPath) -> Bool {
         // Return NO if you do not want the specified item to be editable.
-        if (indexPath.row == 0) {
+        if (indexPath.row == 0 && weatherAPI.locationServicesEnabled) {
             return false
         }
         return true
@@ -243,15 +226,13 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     }
     
 
-    // Override to support editing the table view.
     override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
         
         if editingStyle == .Delete {
             // Delete the row from the data source
             tableView.beginUpdates()
-            let placeID = weatherPlaceIDs![indexPath.row]
-            self.delegate?.didDeleteLocation(placeID)
-            weatherPlaceIDs?.removeAtIndex(indexPath.row)
+            
+            weatherAPI.deleteLocation(indexPath.row)
             tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
             tableView.endUpdates()
                 
@@ -259,40 +240,20 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     }
 
 
-    // Override to support rearranging the table view.
     override func tableView(tableView: UITableView, moveRowAtIndexPath fromIndexPath: NSIndexPath, toIndexPath: NSIndexPath) {
-        
-        tableView.beginUpdates()
-        let movedItem = weatherPlaceIDs![fromIndexPath.row]
-        weatherPlaceIDs?.removeAtIndex(fromIndexPath.row)
-        weatherPlaceIDs?.insert(movedItem, atIndex: toIndexPath.row)
-        tableView.endUpdates()
-        
+    
+        weatherAPI.moveLocation(fromIndexPath.row, toIndex: toIndexPath.row)
         tableView.reloadData()
-        
-        self.delegate?.didArrangeList(weatherPlaceIDs!)
-        
+    
     }
 
-
-    
-    // Override to support conditional rearranging of the table view.
     override func tableView(tableView: UITableView, canMoveRowAtIndexPath indexPath: NSIndexPath) -> Bool {
         // Return NO if you do not want the item to be re-orderable.
-        if (indexPath.row == 0) {
+        if (indexPath.row == 0 && weatherAPI.locationServicesEnabled) {
             return false
         }
-        
         return true
     }
 
-
-    @IBAction func editWasPressed(sender: UIBarButtonItem) {
-        tableView.editing = true
-        tableView.reloadData()
-    }
-
-    func doneWasPressed(sender: AnyObject) {
-
-    }
 }
+

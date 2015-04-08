@@ -11,81 +11,77 @@ import CoreLocation
 
 class WeatherRequester: NSObject {
     
-    static let sharedRequester = WeatherRequester()
-    
     private let apiKey : String
     private let baseURL: NSURL
 
 
     
     override init() {
-        let pathToFile = NSBundle.mainBundle().pathForResource("APIKey", ofType: "")
-        let file = NSString(contentsOfFile: pathToFile!, encoding: NSUTF8StringEncoding, error: nil)
-        self.apiKey = file!.stringByTrimmingCharactersInSet(NSCharacterSet.newlineCharacterSet())
+        let pathToFile = NSBundle.mainBundle().pathForResource("APIKeys", ofType: "plist")
+        let keys = NSDictionary(contentsOfFile: pathToFile!)
+        self.apiKey = keys!["forecast"] as! String
         self.baseURL = NSURL(string: "https://api.forecast.io/forecast/\(self.apiKey)/")!
+        super.init()
     }
-   
-    func getWeatherData(placeDetails: (description: String, placeID: String), coordinates: String, isLocal: Bool, completion: (weatherData : WeatherData?, placeID: String, error: NSError!) -> Void) {
-
     
+    
+    func populateWeatherForLocation(coordinates: String, completion: (weatherJSON: NSDictionary?, error: NSError! ) -> Void ) {
+        
+        println("request sent")
+        
         let forecastURL = NSURL(string: coordinates, relativeToURL:baseURL)
         let sharedSession = NSURLSession.sharedSession()
         let downloadTask: NSURLSessionDownloadTask = sharedSession.downloadTaskWithURL(forecastURL!, completionHandler: { (location: NSURL!, response:NSURLResponse!, error: NSError!) -> Void in
-            
+        
             if error == nil {
                 let data = NSData(contentsOfURL: location, options: nil, error: nil)
                 let weatherJSON : NSDictionary = NSJSONSerialization.JSONObjectWithData(data!, options: nil, error: nil) as! NSDictionary
-                
-                let weatherData = self.dataFromRequest(placeDetails.description, weatherJSON: weatherJSON) as WeatherData
-                completion(weatherData: weatherData, placeID: placeDetails.placeID, error: nil)
+                println("JSON:")
+                completion(weatherJSON: weatherJSON, error: nil)
                 
 
             } else {
-                completion(weatherData: nil, placeID: "", error: error)
-                println(error)
+                completion(weatherJSON: nil, error: error)
+                println("weather request error: \(error)")
             }
         })
         downloadTask.resume()
     }
-    
-    
-    func dataFromRequest(placeDescription: String, weatherJSON: NSDictionary) -> WeatherData {
+        
+    func dataFromRequest(weatherJSON: NSDictionary, coordinates: String, location: WeatherData) -> WeatherData {
         
         let currentWeather = weatherJSON["currently"] as! NSDictionary
         let data = WeatherData()
         
 //        let fTemp = currentWeather["apparentTemperature"] as Double
 //        let cTemp = Int((fTemp - 32) / 1.8)  // Conversion to Celcius
-//        data.temperature = (Int(fTemp), cTemp) as (Int, Int)
-//        data.wind = (windSpeed, windSpeedKPH)  as (Double, Double)
+//        location.temperature = (Int(fTemp), cTemp) as (Int, Int)
+//        location.wind = (windSpeed, windSpeedKPH)  as (Double, Double)
 //        let windSpeed = currentWeather["windSpeed"] as Double
 //        let windSpeedKPH = windSpeed * 1.609344
         
         let iconString = currentWeather["icon"] as! String
         
         
-        
-        data.locationName = placeDescription
-        data.temperature = currentWeather["apparentTemperature"] as? Int
-        data.humidity = currentWeather["humidity"] as? Double
+        location.coordinates = coordinates
+        location.temperature = currentWeather["apparentTemperature"] as? Int
+        location.humidity = currentWeather["humidity"] as? Double
         if let precip = currentWeather["precipProbability"] as? Double {
             let precipPercent = precip * 100
-            data.precip = Int(precipPercent)
+            location.precip = Int(precipPercent)
         }
         
-        data.summary = currentWeather["summary"] as? String
+        location.summary = currentWeather["summary"] as? String
 
         if let wind = currentWeather["windSpeed"] as? Double {
             let windAsInteger = Int(round(wind))
-            data.wind = windAsInteger
+            location.wind = windAsInteger
         }
         
-        data.unixTime = currentWeather["time"] as? Int
-        data.imageString = currentWeather["icon"] as? String
-        data.image = weatherImageFromString(iconString)
-        println("icon: \(data.image)")
+        location.unixTime = currentWeather["time"] as? Int
+        location.imageString = currentWeather["icon"] as? String
+
         
-    
         // Daily Weather
         
         let dailyWeather = weatherJSON["daily"] as! NSDictionary
@@ -94,57 +90,15 @@ class WeatherRequester: NSObject {
         let todayDetails = weatherDetails[1] as! NSDictionary
         
         let minTemp = todayDetails["apparentTemperatureMin"] as? Double
-        data.currentDayLowTemp = Int(minTemp!)
+        location.currentDayLowTemp = Int(minTemp!)
         
         let maxTemp = todayDetails["apparentTemperatureMax"] as? Double
-        data.currentDayHighTemp = Int(maxTemp!)
+        location.currentDayHighTemp = Int(maxTemp!)
         
-        return data
+        return location
     }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    func weatherImageFromString(stringIcon: String) -> UIImage {
-        var imageName: String
-        
-        switch stringIcon {
-        case "clear-day":
-            imageName = "clear-day"
-        case "clear-night":
-            imageName = "clear-night"
-        case "rain":
-            imageName = "raindrop"
-        case "snow":
-            imageName = "snowflake"
-        case "sleet":
-            imageName = "sleet"
-        case "wind":
-            imageName = "wind"
-        case "fog":
-            imageName = "cloudIcon"
-        case "cloudy":
-            imageName = "cloudIcon"
-        case "partly-cloudy-day":
-            imageName = "cloudIcon"
-        case "partly-cloudy-night":
-            imageName = "cloudIcon"
-        default:
-            imageName = "defaultIcon"
-            
-        }
-        println("image: \(imageName)")
-        var iconImage = UIImage(named: imageName)
-        return iconImage!
-        
-        
-    }
+
     
     func dateStringFromUnixTime(unixTime: Int) -> String {
         let timeInSeconds = NSTimeInterval(unixTime)

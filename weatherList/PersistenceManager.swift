@@ -14,7 +14,12 @@ class PersistenceManager: NSObject {
         static let weatherLocations = "weatherLocations"
     }
     
-    private var weatherLocations : [WeatherData] = []
+    private var weatherLocations : [WeatherData] = [] {
+        didSet{
+            NSNotificationCenter.defaultCenter().postNotificationName("locationsListUpdated", object: nil)
+            println("persistence updated")
+        }
+    }
     let defaults = NSUserDefaults.standardUserDefaults()
     
 
@@ -27,9 +32,28 @@ class PersistenceManager: NSObject {
                 weatherLocations = decodedLocations
             }
         } else {
-            // if location services is enabled, get current location and create it
-            // if disabled create a placeholder location Asheville, NC and get weather data for it
+            weatherLocations = getPlaceholderLocation()
         }
+        println("weather locations: \(weatherLocations)")
+        
+    }
+    
+    func getPlaceholderLocation() -> [WeatherData] {
+        let data = WeatherData()
+        data.locationName = "Asheville, NC"
+        data.displayName = "Asheville"
+        data.coordinates = "35.590878,-82.538970"
+        data.temperature = 70
+        data.precip = 10
+        data.wind = 5
+        data.summary = "Partly Cloudy"
+        data.unixTime = 1428463969
+        data.placeID = "placeholder"
+        data.currentDayHighTemp = 75
+        data.currentDayLowTemp = 56
+        data.imageString = "partly-cloudy"
+        
+        return [data]
     }
     
     
@@ -37,16 +61,41 @@ class PersistenceManager: NSObject {
         return weatherLocations
     }
     
-    func addLocation(placeDetails: (description: String, placeID: String)) {
+    func createLocation(placeDetails: (description: String, placeID: String)) -> Int {
         
-        // geocode location coordinates using google API and placeID
-        // send coordinates to weather Requester to populate WeatherData instance
-        // create instance of WeatherData using description, short name, placeID and the weatherconditions from the Weather Requester
-        // save the location to the weatherMoments array
+        // Create new Location
+        let newLocation = WeatherData()
+        newLocation.locationName = placeDetails.description
+        newLocation.placeID = placeDetails.placeID
+        
+        // Create a display name by extracting the locality from the full description
+        let splitName = split(placeDetails.description) {$0 == ","}
+        let locality = splitName[0]
+        newLocation.displayName = locality
+        
+        if (placeDetails.placeID == "local" && !weatherLocations.isEmpty) {
+            weatherLocations[0] = newLocation
+        } else {
+            weatherLocations.append(newLocation)
+        }
+        
+        saveLocations()
+        // return the index the new location was inserted into
+        return find(weatherLocations, newLocation)!
+        
     }
+    
+    func updateLocation(index: Int, updatedLocation: WeatherData) {
+        weatherLocations[index] = updatedLocation
+        NSNotificationCenter.defaultCenter().postNotificationName("locationsListUpdated", object: nil)
+        saveLocations()
+    }
+    
+    
     
     func deleteLocation(index: Int) {
         weatherLocations.removeAtIndex(index)
+        saveLocations()
     }
     
     func moveLocation(fromIndex: Int, toIndex: Int) {
