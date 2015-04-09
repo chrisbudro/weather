@@ -7,7 +7,6 @@
 //
 
 import UIKit
-import CoreLocation
 
 
 class LocationsTableViewController: UITableViewController, UITableViewDelegate, UITableViewDataSource, UISearchBarDelegate, UISearchControllerDelegate, UISearchResultsUpdating {
@@ -22,11 +21,8 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     
     let weatherAPI = WeatherAPI.sharedInstance
     
-    var searchResults: String?
-    let geoCoder = CLGeocoder()
     var autoCompleteResults : [(description: String, placeID: String)] = []
     let searchResultsView = UITableViewController()
-//    var results: NSMutableArray?
     var searchController : UISearchController?
     var currentIndex : Int?
     var weatherLocations : [WeatherData] {
@@ -95,7 +91,6 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
 
     
     func searchBarSearchButtonClicked(searchBar: UISearchBar) {
-        self.searchResults = searchBar.text
         getAutoCompleteResults(searchBar.text)
         searchBar.resignFirstResponder()
     
