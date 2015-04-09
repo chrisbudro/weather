@@ -63,7 +63,6 @@ class TransitionManager: UIPercentDrivenInteractiveTransition, UIViewControllerI
             }, completion: { finished in
                 
                 if (transitionContext.transitionWasCancelled()) {
-                    println("cancelled")
                     transitionContext.completeTransition(false)
 
                 } else {
