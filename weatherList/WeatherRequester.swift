@@ -11,39 +11,46 @@ import CoreLocation
 
 class WeatherRequester: NSObject {
     
-    private let apiKey : String
-    private let baseURL: NSURL
+    private var apiKey : String?
+    private var baseURL: NSURL?
 
 
     override init() {
-        let pathToFile = NSBundle.mainBundle().pathForResource("APIKeys", ofType: "plist")
-        let keys = NSDictionary(contentsOfFile: pathToFile!)
-        self.apiKey = keys!["forecast"] as! String
-        self.baseURL = NSURL(string: "https://api.forecast.io/forecast/\(self.apiKey)/")!
+        if let
+            pathToFile = NSBundle.mainBundle().pathForResource("APIKeys", ofType: "plist"),
+            keys = NSDictionary(contentsOfFile: pathToFile),
+            key = keys["forecast"] as? String
+        {
+            self.apiKey = key
+            self.baseURL = NSURL(string: "https://api.forecast.io/forecast/\(self.apiKey!)/")!
+        } else {
+            println("There was a problem accessing the forecast.io api key from APIKeys.plist.  You will not be able to get weather data without it.  Make sure to implement this file per the README")
+        }
         super.init()
     }
     
     
     func populateWeatherForLocation(coordinates: String, completion: (weatherJSON: NSDictionary?, error: NSError! ) -> Void ) {
         
-        let forecastURL = NSURL(string: coordinates, relativeToURL:baseURL)
-        let sharedSession = NSURLSession.sharedSession()
-        let downloadTask: NSURLSessionDownloadTask = sharedSession.downloadTaskWithURL(forecastURL!, completionHandler: { (location: NSURL!, response:NSURLResponse!, error: NSError!) -> Void in
-        
-            if error == nil {
-                if let
-                    data = NSData(contentsOfURL: location, options: nil, error: nil),
-                    weatherJSON : NSDictionary = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) as? NSDictionary
-                {
-                completion(weatherJSON: weatherJSON, error: nil)
-                }
+        if let forecastURL = NSURL(string: coordinates, relativeToURL:baseURL) {
+            let sharedSession = NSURLSession.sharedSession()
+            let downloadTask: NSURLSessionDownloadTask = sharedSession.downloadTaskWithURL(forecastURL, completionHandler: { (location: NSURL!, response:NSURLResponse!, error: NSError!) -> Void in
+            
+                if error == nil {
+                    if let
+                        data = NSData(contentsOfURL: location, options: nil, error: nil),
+                        weatherJSON : NSDictionary = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) as? NSDictionary
+                    {
+                    completion(weatherJSON: weatherJSON, error: nil)
+                    }
 
-            } else {
-                completion(weatherJSON: nil, error: error)
-                println("weather request error: \(error)")
-            }
-        })
-        downloadTask.resume()
+                } else {
+                    completion(weatherJSON: nil, error: error)
+                    println("weather request error: \(error)")
+                }
+            })
+            downloadTask.resume()
+        }
     }
         
     func dataFromRequest(weatherJSON: NSDictionary, coordinates: String, location: WeatherData) -> WeatherData {

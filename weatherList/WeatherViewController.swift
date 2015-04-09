@@ -28,7 +28,7 @@ class WeatherViewController: UICollectionViewController {
     var nextImageView = UIImageView()
     var toImage = UIImage()
     var scrollOffset : CGFloat?
-    var currentIndex : Int?
+//    var currentIndex : Int?
     let transitionManager = TransitionManager()
     var addLocationsButton : UIBarButtonItem!
 
@@ -41,15 +41,21 @@ class WeatherViewController: UICollectionViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        // Add observer to the locations collection to refresh the UI when it has been updated
         NSNotificationCenter.defaultCenter().addObserver(self, selector: "refreshList", name: "locationsListUpdated", object: nil)
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "viewBecameActive", name: UIApplicationDidBecomeActiveNotification, object: nil)
-        
-        if weatherLocations.count > 0 {
-            currentIndex = 0
-        }
         
         
         // loadSavedState here.  load last seen index as currentIndex
+        
+        // Refresh the UI when app comes to the foreground
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: "viewBecameActive", name: UIApplicationDidBecomeActiveNotification, object: nil)
+        
+//        if weatherLocations.count > 0 {
+//            currentIndex = 0
+//        }
+        
+        
+        
         
         weatherAPI.getCurrentLocation()
         prepareBackgroundImageViews()
@@ -59,8 +65,8 @@ class WeatherViewController: UICollectionViewController {
     
     //MARK: Weather Updates
     
-    func updateWeatherData(currentIndex: Int?, forceUpdate: Bool) {
-        if let index = currentIndex {
+    func updateWeatherData(#forceUpdate: Bool) {
+        if let index = getCurrentIndex() {
             weatherAPI.refreshWeather(index, forceUpdate: forceUpdate)
 
         } else {
@@ -73,7 +79,7 @@ class WeatherViewController: UICollectionViewController {
     
     func refreshList() {
         dispatch_async(dispatch_get_main_queue(), { () -> Void in
-            if let index = self.currentIndex {
+            if let index = self.getCurrentIndex() {
                 self.collectionView?.reloadData()
                 if (self.weatherLocations.count > index) {
                     self.collectionView?.selectItemAtIndexPath(NSIndexPath(forItem: index, inSection: 0), animated: false, scrollPosition: .CenteredHorizontally)
@@ -82,14 +88,30 @@ class WeatherViewController: UICollectionViewController {
         })
     }
     
+    func goToIndex(index: Int?) {
+        dispatch_async(dispatch_get_main_queue(), { () -> Void in
+            if let toIndex = index {
+                self.collectionView!.reloadData()
+                if (self.weatherLocations.count > index) {
+                    self.collectionView!.selectItemAtIndexPath(NSIndexPath(forItem: toIndex, inSection: 0), animated: false, scrollPosition: .CenteredHorizontally)
+                }
+            }
+        })
+        
+        
+        
+    }
+    
     func prepareBackgroundImageViews() {
-        // prepare background imageViews for transitions
+        
+        // Setup two image views to cross dissolve between when paging
+        
         collectionView!.backgroundColor = UIColor.blackColor()
         nextImageView.alpha = 0.0
         let backgroundView = UIView(frame: self.view.bounds)
         backgroundView.backgroundColor = UIColor.clearColor()
-        backgroundView.addSubview(nextImageView)
         backgroundView.addSubview(backgroundImageView)
+        backgroundView.addSubview(nextImageView)
         backgroundView.alpha = 0.5
         
         backgroundImageView.backgroundColor = UIColor.clearColor()
@@ -102,6 +124,7 @@ class WeatherViewController: UICollectionViewController {
         self.collectionView?.backgroundView = backgroundView
         
         // set first background image
+        let currentIndex = getCurrentIndex()
         backgroundImageView.image = getImage(currentIndex)
     }
     
@@ -136,8 +159,8 @@ class WeatherViewController: UICollectionViewController {
     
     func getElapsedTimeInSeconds(unixTime: Int) -> Int {
         let lastUpdateTimestamp = NSTimeInterval(unixTime)
-        let elapsedTime = NSDate().timeIntervalSince1970 - lastUpdateTimestamp
-        return Int(elapsedTime)
+        let elapsedTimeInSeconds = NSDate().timeIntervalSince1970 - lastUpdateTimestamp
+        return Int(elapsedTimeInSeconds)
     }
     
     
@@ -159,10 +182,20 @@ class WeatherViewController: UICollectionViewController {
     }
     
     func viewBecameActive() {
-        if (currentIndex == 0) {
+        if (getCurrentIndex() == 0) {
             weatherAPI.getCurrentLocation()
         }
-        updateWeatherData(currentIndex, forceUpdate: false)
+        updateWeatherData(forceUpdate: false)
+    }
+    
+    
+    func getCurrentIndex() -> Int? {
+        // Find horizontal center by halving frame width and offsetting by the scroll view.  Then grab the indexPath at that point
+        let centerPoint = CGPointMake(self.collectionView!.frame.size.width / 2 + collectionView!.contentOffset.x, self.collectionView!.frame.size.height / 2)
+        if let currentIndexPath = self.collectionView!.indexPathForItemAtPoint(centerPoint) {
+            return currentIndexPath.row
+        }
+        return nil
     }
     
 
@@ -212,7 +245,7 @@ class WeatherViewController: UICollectionViewController {
         if (segue.identifier == "showLocationsList" ) {
             let vc = segue.destinationViewController as! LocationsTableViewController
  
-            vc.currentIndex = currentIndex
+            vc.currentIndex = getCurrentIndex()
             
             // Transition Animation
             vc.transitioningDelegate = self.transitionManager
@@ -225,10 +258,10 @@ class WeatherViewController: UICollectionViewController {
     
     
     func refreshWasPressed() {
-        if (currentIndex == 0 && weatherAPI.locationServicesEnabled) {
+        if (getCurrentIndex() == 0 && weatherAPI.locationServicesEnabled) {
             weatherAPI.getCurrentLocation()
         }
-        updateWeatherData(currentIndex, forceUpdate: true)
+        updateWeatherData(forceUpdate: true)
     }
     
     func addWasPressed(sender: UIBarButtonItem) {
@@ -255,10 +288,8 @@ extension WeatherViewController : UICollectionViewDataSource, UICollectionViewDe
     override func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCellWithReuseIdentifier(Constants.cellReuseIdentifier, forIndexPath: indexPath) as! WeatherViewCell
         
-        
-        
+
         let location = weatherLocations[indexPath.row]
-        currentIndex = indexPath.row
 
         cell.locationNameLabel.text = location.displayName
         if let temperature = location.temperature,
@@ -324,17 +355,15 @@ extension WeatherViewController : UIScrollViewDelegate {
         
         if (abs(distanceSwiped) > (self.view.bounds.width / 2)) {
             
-            // Find horizontal center by halving frame width and offsetting by the scroll view.  Then grab the indexPath at that point
-            let centerPoint = CGPointMake(self.collectionView!.frame.size.width / 2 + scrollView.contentOffset.x, self.collectionView!.frame.size.height / 2)
-            let currentIndexPath = self.collectionView!.indexPathForItemAtPoint(centerPoint)
-            
             //update current Index
-            currentIndex = currentIndexPath!.row
-            backgroundImageView.image = getImage(currentIndex!)
+            let currentIndex = getCurrentIndex()
+            backgroundImageView.image = getImage(currentIndex)
             
             // reset cross dissolve image views
             backgroundImageView.alpha = 1.0
             nextImageView.alpha = 0.0
         }
     }
+    
+
 }

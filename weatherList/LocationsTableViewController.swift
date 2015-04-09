@@ -114,10 +114,8 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         if segue.identifier == Constants.segueDismissList {
             let vc = segue.destinationViewController as! WeatherViewController
-            if let index = currentIndex {
-                vc.currentIndex = index
+                vc.goToIndex(currentIndex)
                 currentIndex = nil
-            }
         }
     }
     

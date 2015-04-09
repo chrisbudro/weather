@@ -9,20 +9,19 @@
 /* Begin PBXBuildFile section */
 		4CB71BE51ACCC683008D18E5 /* TransitionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CB71BE41ACCC683008D18E5 /* TransitionManager.swift */; };
 		8E3267151ACF677000DA54F7 /* Storyboard.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8E3267141ACF677000DA54F7 /* Storyboard.storyboard */; };
-		8E32671B1AD1984400DA54F7 /* APIKeys.plist in Resources */ = {isa = PBXBuildFile; fileRef = 8E32671A1AD1984400DA54F7 /* APIKeys.plist */; };
 		8E68AA481ACDA13300B34925 /* WeatherViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E68AA471ACDA13300B34925 /* WeatherViewCell.swift */; };
 		8E68AA4E1ACDC00E00B34925 /* WeatherRequester.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E68AA4D1ACDC00E00B34925 /* WeatherRequester.swift */; };
 		8E68AA521ACE021700B34925 /* WeatherData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E68AA511ACE021700B34925 /* WeatherData.swift */; };
 		8ED2A8261AD3754500FAB8A6 /* PersistenceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ED2A8251AD3754500FAB8A6 /* PersistenceManager.swift */; };
 		8ED2A8281AD376F500FAB8A6 /* WeatherAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ED2A8271AD376F500FAB8A6 /* WeatherAPI.swift */; };
 		8ED2A82A1AD382B500FAB8A6 /* PlacesRequester.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ED2A8291AD382B500FAB8A6 /* PlacesRequester.swift */; };
+		8EF4E2101AD72F7E00144D72 /* APIKeys.plist in Resources */ = {isa = PBXBuildFile; fileRef = 8EF4E20F1AD72F7E00144D72 /* APIKeys.plist */; };
 		8EFEEB721AC8AA0100769F87 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFEEB711AC8AA0100769F87 /* AppDelegate.swift */; };
 		8EFEEB791AC8AA0100769F87 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8EFEEB781AC8AA0100769F87 /* Images.xcassets */; };
 		8EFEEB7C1AC8AA0100769F87 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 8EFEEB7A1AC8AA0100769F87 /* LaunchScreen.xib */; };
 		8EFEEB881AC8AA0100769F87 /* weatherListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFEEB871AC8AA0100769F87 /* weatherListTests.swift */; };
 		8EFEEB921AC8B02D00769F87 /* WeatherViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFEEB911AC8B02D00769F87 /* WeatherViewController.swift */; };
 		8EFEEB9A1AC8DDF400769F87 /* LocationsTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFEEB991AC8DDF400769F87 /* LocationsTableViewController.swift */; };
-		8EFEEBCC1ACB51E100769F87 /* APIKey in Resources */ = {isa = PBXBuildFile; fileRef = 8EFEEBCB1ACB51E100769F87 /* APIKey */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,13 +37,13 @@
 /* Begin PBXFileReference section */
 		4CB71BE41ACCC683008D18E5 /* TransitionManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TransitionManager.swift; sourceTree = "<group>"; };
 		8E3267141ACF677000DA54F7 /* Storyboard.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = Storyboard.storyboard; sourceTree = "<group>"; };
-		8E32671A1AD1984400DA54F7 /* APIKeys.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = APIKeys.plist; sourceTree = "<group>"; };
 		8E68AA471ACDA13300B34925 /* WeatherViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WeatherViewCell.swift; sourceTree = "<group>"; };
 		8E68AA4D1ACDC00E00B34925 /* WeatherRequester.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WeatherRequester.swift; sourceTree = "<group>"; };
 		8E68AA511ACE021700B34925 /* WeatherData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WeatherData.swift; sourceTree = "<group>"; };
 		8ED2A8251AD3754500FAB8A6 /* PersistenceManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PersistenceManager.swift; sourceTree = "<group>"; };
 		8ED2A8271AD376F500FAB8A6 /* WeatherAPI.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WeatherAPI.swift; sourceTree = "<group>"; };
 		8ED2A8291AD382B500FAB8A6 /* PlacesRequester.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PlacesRequester.swift; sourceTree = "<group>"; };
+		8EF4E20F1AD72F7E00144D72 /* APIKeys.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = APIKeys.plist; path = ../APIKeys.plist; sourceTree = "<group>"; };
 		8EFEEB6C1AC8AA0100769F87 /* weatherList.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = weatherList.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8EFEEB701AC8AA0100769F87 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8EFEEB711AC8AA0100769F87 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -117,7 +116,6 @@
 		8EFEEB631AC8AA0100769F87 = {
 			isa = PBXGroup;
 			children = (
-				8E32671A1AD1984400DA54F7 /* APIKeys.plist */,
 				8EFEEB6E1AC8AA0100769F87 /* weatherList */,
 				8EFEEB841AC8AA0100769F87 /* weatherListTests */,
 				8EFEEB6D1AC8AA0100769F87 /* Products */,
@@ -152,6 +150,7 @@
 		8EFEEB6F1AC8AA0100769F87 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				8EF4E20F1AD72F7E00144D72 /* APIKeys.plist */,
 				8EFEEB7A1AC8AA0100769F87 /* LaunchScreen.xib */,
 				8EFEEB701AC8AA0100769F87 /* Info.plist */,
 				8EFEEBCD1ACCAC0F00769F87 /* weatherList-Bridging-Header.h */,
@@ -257,9 +256,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8EFEEBCC1ACB51E100769F87 /* APIKey in Resources */,
-				8E32671B1AD1984400DA54F7 /* APIKeys.plist in Resources */,
 				8EFEEB7C1AC8AA0100769F87 /* LaunchScreen.xib in Resources */,
+				8EF4E2101AD72F7E00144D72 /* APIKeys.plist in Resources */,
 				8EFEEB791AC8AA0100769F87 /* Images.xcassets in Resources */,
 				8E3267151ACF677000DA54F7 /* Storyboard.storyboard in Resources */,
 			);

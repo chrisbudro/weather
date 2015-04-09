@@ -15,17 +15,21 @@ class PlacesRequester: NSObject {
     private let baseURL = "https://maps.googleapis.com/maps/api/place/"
     
     override init() {
-        let pathToFile = NSBundle.mainBundle().pathForResource("APIKeys", ofType: "plist")
-        let keys = NSDictionary(contentsOfFile: pathToFile!)
-        if let key = keys!["places"] as? String {
+        if let
+            pathToFile = NSBundle.mainBundle().pathForResource("APIKeys", ofType: "plist"),
+            keys = NSDictionary(contentsOfFile: pathToFile),
+            key = keys["places"] as? String
+        {
             self.apiKey = key
+        } else {
+            println("There was a problem accessing the google places api key from APIKeys.plist. You will not be able to get search results or add locations without it.  Make sure to implement the file per the README")
         }
         super.init()
     }
     
     
     func getAutoCompleteResults(locationString: String, completion: (placeList: [(description: String, placeID: String)], error: NSError!) -> Void ) {
-        if (locationString.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) > 0 && apiKey != nil) {
+        if ((locationString.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) > 0) && (apiKey != nil)) {
             
             let placeType = "(cities)"
             let strippedLocationString = locationString.stringByReplacingOccurrencesOfString(" ", withString: "", options: nil, range: nil)
