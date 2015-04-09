@@ -6,9 +6,7 @@
 //  Copyright (c) 2015 chrisbudro. All rights reserved.
 //
 
-import UIKit
-import CoreLocation
-
+import Foundation
 
 class WeatherData: NSObject, NSCoding {
     

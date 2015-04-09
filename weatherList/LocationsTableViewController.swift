@@ -26,7 +26,6 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     let geoCoder = CLGeocoder()
     var autoCompleteResults : [(description: String, placeID: String)] = []
     let searchResultsView = UITableViewController()
-//    var results: NSMutableArray?
     var searchController : UISearchController?
     var currentIndex : Int?
     var weatherLocations : [WeatherData] {
@@ -37,47 +36,43 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     override func viewDidLoad() {
         super.viewDidLoad()
  
-        // Instantiate Search Controller
-        self.searchController = UISearchController(searchResultsController: searchResultsView)
-        self.searchController!.searchResultsUpdater = self
-        self.searchController!.searchBar.delegate = self
-        self.searchController!.delegate = self
-        self.searchController!.dimsBackgroundDuringPresentation = false
-        self.searchController!.hidesNavigationBarDuringPresentation = true
-        self.searchController!.searchBar.showsCancelButton = false
-        self.navigationItem.titleView = searchController!.searchBar
-
-        let resultsTableView = UITableView(frame: self.tableView.frame)
-        self.searchResultsView.tableView = resultsTableView
-        self.searchResultsView.tableView.dataSource = self
-        self.searchResultsView.tableView.delegate = self
-//        self.searchResultsView.navigationController?.navigationBarHidden = true
-        self.definesPresentationContext = true
-        
-        // Instantiate Table View Cell
-        self.searchResultsView.tableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: Constants.cell)
-        
-        // Table Header
-        
-        let headerView = UIView(frame: CGRectMake(0, 20, tableView.frame.width, 60.0))
-
-        
-        
-        
-        tableView.frame.size.width = UIApplication.sharedApplication().keyWindow!.frame.size.width - 50
-        tableView.frame.size.height = UIApplication.sharedApplication().keyWindow!.frame.size.height
-        searchController!.searchBar.frame = CGRectMake(0, 0, self.tableView.frame.size.width, 44)
-        searchController!.searchBar.backgroundColor = UIColor.lightGrayColor()
-        
-        
-        tableView.contentInset = UIEdgeInsetsMake(20, 0, 0, 0)
-        
-        headerView.addSubview(searchController!.searchBar)
-        
-        tableView.tableHeaderView = searchController!.searchBar
+        setupSearchController()
+        setupTableView()
         
     }
+    
+    func setupSearchController() {
+        
+        // Instantiate Search Controller
+        self.definesPresentationContext = true
+        
+        searchController = UISearchController(searchResultsController: searchResultsView)
+        searchController!.searchResultsUpdater = self
+        searchController!.searchBar.delegate = self
+        searchController!.delegate = self
+        searchController!.dimsBackgroundDuringPresentation = false
+        searchController!.hidesNavigationBarDuringPresentation = true
+        searchController!.searchBar.showsCancelButton = false
+        searchController!.searchBar.frame = CGRectMake(0, 0, self.tableView.frame.size.width, 44)
+        searchController!.searchBar.backgroundColor = UIColor.lightGrayColor()
 
+        
+        let resultsTableView = UITableView(frame: self.tableView.frame)
+        searchResultsView.tableView = resultsTableView
+        searchResultsView.tableView.dataSource = self
+        searchResultsView.tableView.delegate = self
+        searchResultsView.tableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: Constants.cell)
+    }
+
+
+    func setupTableView() {
+        tableView.frame.size.width = UIApplication.sharedApplication().keyWindow!.frame.size.width - 50
+        tableView.frame.size.height = UIApplication.sharedApplication().keyWindow!.frame.size.height
+        tableView.contentInset = UIEdgeInsetsMake(20, 0, 0, 0)
+        tableView.tableHeaderView = searchController!.searchBar
+
+    }
+    
 
     // MARK: - Search Bar Data source
     
@@ -136,10 +131,6 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         tableView.reloadData()
     }
     
-    func doneWasPressed(sender: AnyObject) {
-        
-    }
-
 
     // MARK: - Table view data source
 
@@ -164,12 +155,8 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         if (tableView == self.tableView ) {
             
             let location = weatherLocations[indexPath.row]
-            
-                cell.textLabel!.text = location.locationName
-                cell.backgroundColor = UIColor.clearColor()
-                cell.textLabel!.textColor = UIColor.blackColor()
-            
-            
+            cell.textLabel!.text = location.locationName
+
             if (indexPath.row == 0 && weatherAPI.locationServicesEnabled) {
                 cell.accessoryType = .Checkmark
                 cell.selectionStyle = .None
@@ -177,7 +164,7 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         }
         else if (tableView == self.searchResultsView.tableView) {
     
-            if (self.autoCompleteResults.count > indexPath.row) {
+            if (autoCompleteResults.count > indexPath.row) {
                 let placeDetails = autoCompleteResults[indexPath.row]
                 cell.textLabel!.text = placeDetails.description
                 }
@@ -192,8 +179,8 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
             currentIndex = indexPath.row
             
         } else if (tableView == self.searchResultsView.tableView) {
-            if (self.autoCompleteResults.count > indexPath.row) {
-                let placeDetails = self.autoCompleteResults[indexPath.row]
+            if (autoCompleteResults.count > indexPath.row) {
+                let placeDetails = autoCompleteResults[indexPath.row]
                 weatherAPI.createLocation(placeDetails)
                 searchController?.searchBar.text = ""
                 currentIndex = weatherLocations.count - 1
@@ -241,19 +228,18 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
 
 
     override func tableView(tableView: UITableView, moveRowAtIndexPath fromIndexPath: NSIndexPath, toIndexPath: NSIndexPath) {
-    
+        
         weatherAPI.moveLocation(fromIndexPath.row, toIndex: toIndexPath.row)
         tableView.reloadData()
     
     }
 
     override func tableView(tableView: UITableView, canMoveRowAtIndexPath indexPath: NSIndexPath) -> Bool {
-        // Return NO if you do not want the item to be re-orderable.
-        if (indexPath.row == 0 && weatherAPI.locationServicesEnabled) {
+
+            if (tableView == self.tableView && (indexPath.row != 0 || !weatherAPI.locationServicesEnabled)) {
+                return true
+            }
             return false
         }
-        return true
-    }
-
 }
 

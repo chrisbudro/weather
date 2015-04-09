@@ -35,7 +35,7 @@ class WeatherAPI: NSObject {
     
     func refreshWeather(index: Int, forceUpdate: Bool) {
         
-        let location = self.weatherLocations[index]
+        let location = weatherLocations[index]
         
         if let elapsedTime = getElapsedTimeInSeconds(location.unixTime) {
             if (elapsedTime > Constants.minimumTimeSinceLastUpdate || (elapsedTime > 600 && forceUpdate == true) ) {
@@ -88,7 +88,7 @@ class WeatherAPI: NSObject {
     
     private func updateWeatherAtLocation(index: Int, coordinates: String) {
 
-        self.weatherRequest.populateWeatherForLocation(coordinates, completion: { (weatherJSON, error) -> Void in
+        weatherRequest.populateWeatherForLocation(coordinates, completion: { (weatherJSON, error) -> Void in
             if error == nil {
                 // Update weather locations list with populated weather location
                 let updatedLocation = self.weatherRequest.dataFromRequest(weatherJSON!, coordinates: coordinates, location: self.weatherLocations[index])

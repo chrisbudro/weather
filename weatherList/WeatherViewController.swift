@@ -55,10 +55,7 @@ class WeatherViewController: UICollectionViewController {
         
         // loadSavedState here.  load last seen index as currentIndex
         
-
-        
         weatherAPI.getCurrentLocation()
-        
         prepareBackgroundImageViews()
         setupToolbar()
     }
@@ -148,13 +145,10 @@ class WeatherViewController: UICollectionViewController {
     }
     
     
-    func getTimeSinceLastUpdate(unixTime: Int?) -> String {
-        if let lastUpdate = unixTime {
-            let elapsedTimeInSeconds = getElapsedTimeInSeconds(lastUpdate)
+    func getTimeSinceLastUpdate(unixTime: Int) -> String {
+            let elapsedTimeInSeconds = getElapsedTimeInSeconds(unixTime)
             let elapsedTimeInMinutes = elapsedTimeInSeconds / 60
             return createLastUpdateLabelMessage(elapsedTimeInMinutes)
-        }
-        return ""
     }
     
     
@@ -241,8 +235,6 @@ class WeatherViewController: UICollectionViewController {
             // Transition Animation
             vc.transitioningDelegate = self.transitionManager
             self.transitionManager.locationsListController = vc
-            
-            
         }
     }
 
@@ -369,45 +361,3 @@ extension WeatherViewController : UIScrollViewDelegate {
         }
     }
 }
-
-//extension WeatherViewController : CLLocationManagerDelegate {
-//    
-//    //MARK: Core Location Manager Delegate
-//    
-//    func locationManager(manager: CLLocationManager!, didChangeAuthorizationStatus status: CLAuthorizationStatus) {
-//        
-//        if (CLLocationManager.authorizationStatus() == .AuthorizedAlways || CLLocationManager.authorizationStatus() == .AuthorizedWhenInUse) {
-//            getLocation()
-//        }
-//    }
-//    
-//    func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!) {
-//        self.locationManager.stopUpdatingLocation()
-//        let newLocation = locations[0] as! CLLocation
-//        var distanceFromLast : Double?
-//        if let lastLocation = NSUserDefaults.standardUserDefaults().objectForKey("lastKnownLocation") as? NSData {
-//            
-//            let lastKnownLocation = NSKeyedUnarchiver.unarchiveObjectWithData(lastLocation) as! CLLocation
-//            println("last known: \(lastKnownLocation)")
-//            distanceFromLast = newLocation.distanceFromLocation(lastKnownLocation)  //Fix issue of showing as 0
-//            
-//            println("distance traveled: \(distanceFromLast)")
-//        }
-//        
-//        let locationData = NSKeyedArchiver.archivedDataWithRootObject(newLocation)
-//        NSUserDefaults.standardUserDefaults().setObject(locationData, forKey: "lastKnownLocation")
-//        
-//        println("distance from last: \(distanceFromLast)")
-//        
-//        if (distanceFromLast == nil || distanceFromLast > Constants.minimumDistanceMoved) {
-//            weatherAPI.getLocalWeather(newLocation)
-//            
-//        } else {
-//            stopActivityIndicator()
-//        }
-//    }
-//}
-
-
-
-

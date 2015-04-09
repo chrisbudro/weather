@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 chrisbudro. All rights reserved.
 //
 
-import UIKit
+
 import CoreLocation
 
 class WeatherRequester: NSObject {
@@ -34,11 +34,12 @@ class WeatherRequester: NSObject {
         let downloadTask: NSURLSessionDownloadTask = sharedSession.downloadTaskWithURL(forecastURL!, completionHandler: { (location: NSURL!, response:NSURLResponse!, error: NSError!) -> Void in
         
             if error == nil {
-                let data = NSData(contentsOfURL: location, options: nil, error: nil)
-                let weatherJSON : NSDictionary = NSJSONSerialization.JSONObjectWithData(data!, options: nil, error: nil) as! NSDictionary
-                println("JSON:")
+                if let
+                    data = NSData(contentsOfURL: location, options: nil, error: nil),
+                    weatherJSON : NSDictionary = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) as? NSDictionary
+                {
                 completion(weatherJSON: weatherJSON, error: nil)
-                
+                }
 
             } else {
                 completion(weatherJSON: nil, error: error)
@@ -50,56 +51,42 @@ class WeatherRequester: NSObject {
         
     func dataFromRequest(weatherJSON: NSDictionary, coordinates: String, location: WeatherData) -> WeatherData {
         
-        let currentWeather = weatherJSON["currently"] as! NSDictionary
-        let data = WeatherData()
-        
-//        let fTemp = currentWeather["apparentTemperature"] as Double
-//        let cTemp = Int((fTemp - 32) / 1.8)  // Conversion to Celcius
-//        location.temperature = (Int(fTemp), cTemp) as (Int, Int)
-//        location.wind = (windSpeed, windSpeedKPH)  as (Double, Double)
-//        let windSpeed = currentWeather["windSpeed"] as Double
-//        let windSpeedKPH = windSpeed * 1.609344
-        
-        let iconString = currentWeather["icon"] as! String
-        
-        
-        location.coordinates = coordinates
-        location.temperature = currentWeather["apparentTemperature"] as? Int
-        location.humidity = currentWeather["humidity"] as? Double
-        if let precip = currentWeather["precipProbability"] as? Double {
-            let precipPercent = precip * 100
-            location.precip = Int(precipPercent)
-        }
-        
-        location.summary = currentWeather["summary"] as? String
+        if let currentWeather = weatherJSON["currently"] as? NSDictionary {
 
-        if let wind = currentWeather["windSpeed"] as? Double {
-            let windAsInteger = Int(round(wind))
-            location.wind = windAsInteger
-        }
-        
-        location.unixTime = currentWeather["time"] as? Int
-        location.imageString = currentWeather["icon"] as? String
+            location.coordinates = coordinates
+            location.temperature = currentWeather["apparentTemperature"] as? Int
+            location.humidity = currentWeather["humidity"] as? Double
+            location.summary = currentWeather["summary"] as? String
+            location.unixTime = currentWeather["time"] as? Int
+            location.imageString = currentWeather["icon"] as? String
+            
+            if let wind = currentWeather["windSpeed"] as? Double {
+                let windAsInteger = Int(round(wind))
+                location.wind = windAsInteger
+            }
 
-        
-        // Daily Weather
-        
-        let dailyWeather = weatherJSON["daily"] as! NSDictionary
-        
-        let weatherDetails = dailyWeather["data"] as! NSArray
-        let todayDetails = weatherDetails[1] as! NSDictionary
-        
-        let minTemp = todayDetails["apparentTemperatureMin"] as? Double
-        location.currentDayLowTemp = Int(minTemp!)
-        
-        let maxTemp = todayDetails["apparentTemperatureMax"] as? Double
-        location.currentDayHighTemp = Int(maxTemp!)
-        
+            if let precip = currentWeather["precipProbability"] as? Double {
+                let precipPercent = precip * 100
+                location.precip = Int(precipPercent)
+            }
+            
+            // Daily Weather
+            
+            if let
+                dailyWeather = weatherJSON["daily"] as? NSDictionary,
+                weatherDetails = dailyWeather["data"] as? NSArray,
+                todayDetails = weatherDetails[1] as? NSDictionary,
+                minTemp = todayDetails["apparentTemperatureMin"] as? Double,
+                maxTemp = todayDetails["apparentTemperatureMax"] as? Double
+            {
+                location.currentDayHighTemp = Int(maxTemp)
+                location.currentDayLowTemp = Int(minTemp)
+            }
+        }
         return location
     }
     
 
-    
     func dateStringFromUnixTime(unixTime: Int) -> String {
         let timeInSeconds = NSTimeInterval(unixTime)
         let weatherDate = NSDate(timeIntervalSince1970: timeInSeconds)
@@ -110,7 +97,4 @@ class WeatherRequester: NSObject {
         return dateString
         
     }
-    
-    
-    
 }
