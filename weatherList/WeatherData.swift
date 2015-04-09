@@ -2,7 +2,7 @@
 //  WeatherData.swift
 //  weatherList
 //
-//  Created by Mac Pro on 4/2/15.
+//  Created by Chris Budro on 4/2/15.
 //  Copyright (c) 2015 chrisbudro. All rights reserved.
 //
 

@@ -2,7 +2,7 @@
 //  GooglePlacesRequester.swift
 //  weatherList
 //
-//  Created by Mac Pro on 4/6/15.
+//  Created by Chris Budro on 4/6/15.
 //  Copyright (c) 2015 chrisbudro. All rights reserved.
 //
 
@@ -12,7 +12,6 @@ import CoreLocation
 class PlacesRequester: NSObject {
    
     private var apiKey : String?
-    var placeType = "(cities)"
     private let baseURL = "https://maps.googleapis.com/maps/api/place/"
     
     override init() {
@@ -21,16 +20,14 @@ class PlacesRequester: NSObject {
         if let key = keys!["places"] as? String {
             self.apiKey = key
         }
-        println("api key: \(apiKey)")
         super.init()
     }
     
     
-    // Add safety with If Let statements for parsing results
-    
     func getAutoCompleteResults(locationString: String, completion: (placeList: [(description: String, placeID: String)], error: NSError!) -> Void ) {
         if (locationString.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) > 0 && apiKey != nil) {
-
+            
+            let placeType = "(cities)"
             let strippedLocationString = locationString.stringByReplacingOccurrencesOfString(" ", withString: "", options: nil, range: nil)
             
             let placesRequestURL = NSURL(string: baseURL + "autocomplete/json?input=\(strippedLocationString)&types=\(placeType)&key=\(apiKey!)")

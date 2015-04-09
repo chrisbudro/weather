@@ -7,7 +7,6 @@
 //
 
 import UIKit
-import CoreLocation
 
 
 class WeatherViewController: UICollectionViewController {
@@ -21,9 +20,7 @@ class WeatherViewController: UICollectionViewController {
     }
 
     
-    // Properties
     let weatherAPI = WeatherAPI.sharedInstance
-    
     var weatherLocations : [WeatherData] {
         return weatherAPI.getLocations()
     }
@@ -32,10 +29,9 @@ class WeatherViewController: UICollectionViewController {
     var toImage = UIImage()
     var scrollOffset : CGFloat?
     var currentIndex : Int?
-    var currentCell : WeatherViewCell?
     let transitionManager = TransitionManager()
     var addLocationsButton : UIBarButtonItem!
-    var locationServicesEnabled = true
+
 
     
     deinit {
@@ -65,7 +61,6 @@ class WeatherViewController: UICollectionViewController {
     
     func updateWeatherData(currentIndex: Int?, forceUpdate: Bool) {
         if let index = currentIndex {
-            startActivityIndicator(index)
             weatherAPI.refreshWeather(index, forceUpdate: forceUpdate)
 
         } else {
@@ -77,7 +72,6 @@ class WeatherViewController: UICollectionViewController {
     //MARK: Helper Methods
     
     func refreshList() {
-        println("refresh called")
         dispatch_async(dispatch_get_main_queue(), { () -> Void in
             if let index = self.currentIndex {
                 self.collectionView?.reloadData()
@@ -132,18 +126,6 @@ class WeatherViewController: UICollectionViewController {
         
         toolbar.setItems([refreshButton, buttonSpacer, addLocationsButton], animated: false)
     }
-    
-    
-    func startActivityIndicator(index: Int) {
-        currentCell = collectionView!.cellForItemAtIndexPath(NSIndexPath(forItem: index, inSection: 0)) as? WeatherViewCell
-        currentCell?.activityIndicator.startAnimating()
-    }
-    
-    
-    func stopActivityIndicator() {
-        currentCell?.activityIndicator.stopAnimating()
-    }
-    
     
     func getTimeSinceLastUpdate(unixTime: Int) -> String {
             let elapsedTimeInSeconds = getElapsedTimeInSeconds(unixTime)
@@ -243,7 +225,6 @@ class WeatherViewController: UICollectionViewController {
     
     
     func refreshWasPressed() {
-        println("current index: \(currentIndex), \(locationServicesEnabled)")
         if (currentIndex == 0 && weatherAPI.locationServicesEnabled) {
             weatherAPI.getCurrentLocation()
         }
@@ -278,11 +259,7 @@ extension WeatherViewController : UICollectionViewDataSource, UICollectionViewDe
         
         let location = weatherLocations[indexPath.row]
         currentIndex = indexPath.row
-        println("indexPath: \(indexPath.row)")
-        
-        //make sure all fields are optional.  if data doesn't exist it should be left blank and there should be an activity indicator spinning
 
-        
         cell.locationNameLabel.text = location.displayName
         if let temperature = location.temperature,
                             summary = location.summary,

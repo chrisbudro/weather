@@ -2,7 +2,7 @@
 //  LocationsTableViewController.swift
 //  Stormy
 //
-//  Created by Mac Pro on 3/25/15.
+//  Created by Chris Budro on 3/25/15.
 //  Copyright (c) 2015 chrisbudro. All rights reserved.
 //
 
@@ -82,7 +82,7 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
     func updateSearchResultsForSearchController(searchController: UISearchController) {
 
         getAutoCompleteResults(searchController.searchBar.text)
-        self.searchResultsView.tableView.reloadData()
+        searchResultsView.tableView.reloadData()
     }
 
     
@@ -105,7 +105,6 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         weatherAPI.getAutoCompleteResults(searchTerm, completion: { (placeList, error) -> Void in
             if error == nil {
                 self.autoCompleteResults = placeList
-                println("placeList: \(placeList)")
             } else {
                 println("autocomplete error: \(error)")
             }
@@ -138,7 +137,7 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
         if (tableView == self.tableView) {
             return weatherLocations.count
         }
-        else if (tableView == self.searchResultsView.tableView) {
+        else if (tableView == searchResultsView.tableView) {
             return autoCompleteResults.count
         }
         return 0
@@ -158,7 +157,7 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
                 cell.selectionStyle = .None
             }
         }
-        else if (tableView == self.searchResultsView.tableView) {
+        else if (tableView == searchResultsView.tableView) {
     
             if (autoCompleteResults.count > indexPath.row) {
                 let placeDetails = autoCompleteResults[indexPath.row]
@@ -174,7 +173,7 @@ class LocationsTableViewController: UITableViewController, UITableViewDelegate, 
             // set updated index for collection view to scroll to
             currentIndex = indexPath.row
             
-        } else if (tableView == self.searchResultsView.tableView) {
+        } else if (tableView == searchResultsView.tableView) {
             if (autoCompleteResults.count > indexPath.row) {
                 let placeDetails = autoCompleteResults[indexPath.row]
                 weatherAPI.createLocation(placeDetails)

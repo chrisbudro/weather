@@ -2,7 +2,7 @@
 //  WeatherRequester.swift
 //  weatherList
 //
-//  Created by Mac Pro on 4/2/15.
+//  Created by Chris Budro on 4/2/15.
 //  Copyright (c) 2015 chrisbudro. All rights reserved.
 //
 
@@ -15,7 +15,6 @@ class WeatherRequester: NSObject {
     private let baseURL: NSURL
 
 
-    
     override init() {
         let pathToFile = NSBundle.mainBundle().pathForResource("APIKeys", ofType: "plist")
         let keys = NSDictionary(contentsOfFile: pathToFile!)
@@ -26,8 +25,6 @@ class WeatherRequester: NSObject {
     
     
     func populateWeatherForLocation(coordinates: String, completion: (weatherJSON: NSDictionary?, error: NSError! ) -> Void ) {
-        
-        println("request sent")
         
         let forecastURL = NSURL(string: coordinates, relativeToURL:baseURL)
         let sharedSession = NSURLSession.sharedSession()

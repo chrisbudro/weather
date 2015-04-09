@@ -2,7 +2,7 @@
 //  PersistenceManager.swift
 //  weatherList
 //
-//  Created by Mac Pro on 4/6/15.
+//  Created by Chris Budro on 4/6/15.
 //  Copyright (c) 2015 chrisbudro. All rights reserved.
 //
 
@@ -17,7 +17,6 @@ class PersistenceManager: NSObject {
     private var weatherLocations : [WeatherData] = [] {
         didSet{
             NSNotificationCenter.defaultCenter().postNotificationName("locationsListUpdated", object: nil)
-            println("persistence updated")
         }
     }
     let defaults = NSUserDefaults.standardUserDefaults()
@@ -34,8 +33,6 @@ class PersistenceManager: NSObject {
         } else {
             weatherLocations = getPlaceholderLocation()
         }
-        println("weather locations: \(weatherLocations)")
-        
     }
     
     func getPlaceholderLocation() -> [WeatherData] {
