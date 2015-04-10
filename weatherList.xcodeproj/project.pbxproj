@@ -83,7 +83,7 @@
 				8EFEEB991AC8DDF400769F87 /* LocationsTableViewController.swift */,
 				4CB71BE41ACCC683008D18E5 /* TransitionManager.swift */,
 			);
-			name = Controllers;
+			path = Controllers;
 			sourceTree = "<group>";
 		};
 		8ED2A8221AD3747C00FAB8A6 /* Models */ = {
@@ -91,7 +91,7 @@
 			children = (
 				8E68AA511ACE021700B34925 /* WeatherData.swift */,
 			);
-			name = Models;
+			path = Models;
 			sourceTree = "<group>";
 		};
 		8ED2A8231AD3749A00FAB8A6 /* Views */ = {
@@ -99,7 +99,7 @@
 			children = (
 				8E68AA471ACDA13300B34925 /* WeatherViewCell.swift */,
 			);
-			name = Views;
+			path = Views;
 			sourceTree = "<group>";
 		};
 		8ED2A8241AD374C600FAB8A6 /* Requests */ = {
@@ -110,7 +110,7 @@
 				8E68AA4D1ACDC00E00B34925 /* WeatherRequester.swift */,
 				8ED2A8291AD382B500FAB8A6 /* PlacesRequester.swift */,
 			);
-			name = Requests;
+			path = Requests;
 			sourceTree = "<group>";
 		};
 		8EFEEB631AC8AA0100769F87 = {
